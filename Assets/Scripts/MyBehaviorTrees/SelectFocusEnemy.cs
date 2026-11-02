@@ -2,7 +2,7 @@ using UnityEngine;
 using BehaviorDesigner.Runtime;
 using BehaviorDesigner.Runtime.Tasks;
 
-// Tâches de l'armée ROUGE uniquement : la cible est désignée par l'ArmyManagerRed (focus fire)
+// Tâches de l'armée ROUGE uniquement : la cible est désignée par l'ArmyManagerRed
 // au lieu d'être tirée au hasard comme dans SelectEnemyDrone / SelectEnemyTurret.
 public abstract class SelectFocusEnemy : Action
 {
@@ -18,7 +18,7 @@ public abstract class SelectFocusEnemy : Action
 		m_ArmyElement = (IArmyElement)GetComponent(typeof(IArmyElement));
 	}
 
-	protected abstract GameObject Select(ArmyManagerRed armyManager);
+	protected abstract Transform Select(ArmyManagerRed armyManager);
 
 	public override TaskStatus OnUpdate()
 	{
@@ -27,35 +27,54 @@ public abstract class SelectFocusEnemy : Action
 		ArmyManagerRed armyManager = m_ArmyElement.ArmyManager as ArmyManagerRed;
 		if (armyManager == null) return TaskStatus.Failure; // tâche réservée à l'armée rouge
 
-		GameObject enemy = Select(armyManager);
-		target.Value = enemy != null ? enemy.transform : null;
+		target.Value = Select(armyManager);
 
 		return target.Value != null ? TaskStatus.Success : TaskStatus.Failure;
 	}
-}
 
-[TaskCategory("MyTasks")]
-[TaskDescription("Red army: select the enemy Drone designated by the focus fire of the ArmyManagerRed")]
-public class SelectFocusEnemyDrone : SelectFocusEnemy
-{
-	protected override GameObject Select(ArmyManagerRed armyManager)
+	// la cible de la boucle précédente (null si elle est morte ou si c'était un point de visée)
+	protected ArmyElement PreviousTarget()
 	{
-		return armyManager.GetFocusEnemy<Drone>(transform.position, minRadius.Value, maxRadius.Value);
+		return target.Value != null ? target.Value.GetComponent<ArmyElement>() : null;
+	}
+
+	protected static Transform TransformOf(GameObject go)
+	{
+		return go != null ? go.transform : null;
 	}
 }
 
 [TaskCategory("MyTasks")]
-[TaskDescription("Red army: select the enemy Turret designated by the focus fire of the ArmyManagerRed. A shooting turret reserves its rocket on the target")]
+[TaskDescription("Red army: select an enemy Drone. A drone takes the nearest one and keeps it until it dies; a turret takes the nearest one, aiming where it is going to be")]
+public class SelectFocusEnemyDrone : SelectFocusEnemy
+{
+	protected override Transform Select(ArmyManagerRed armyManager)
+	{
+		Turret shooter = GetComponent<Turret>();
+		if (shooter == null)
+			return TransformOf(armyManager.GetNearestEnemy<Drone>(transform.position, minRadius.Value, maxRadius.Value, PreviousTarget()));
+
+		// les drones bougent et la grenade met 4 s à tomber : on vise la position anticipée
+		GameObject enemy = armyManager.GetNearestEnemy<Drone>(transform.position, minRadius.Value, maxRadius.Value, null);
+		return enemy != null ? armyManager.GetAimPoint(shooter, enemy.GetComponent<ArmyElement>()) : null;
+	}
+}
+
+[TaskCategory("MyTasks")]
+[TaskDescription("Red army: select an enemy Turret. A drone takes the nearest one and keeps it until it dies; a turret follows the focus fire of the ArmyManagerRed and reserves its rocket on the target")]
 public class SelectFocusEnemyTurret : SelectFocusEnemy
 {
-	protected override GameObject Select(ArmyManagerRed armyManager)
+	protected override Transform Select(ArmyManagerRed armyManager)
 	{
+		Turret shooter = GetComponent<Turret>();
+		if (shooter == null)
+			return TransformOf(armyManager.GetNearestEnemy<Turret>(transform.position, minRadius.Value, maxRadius.Value, PreviousTarget()));
+
 		GameObject enemy = armyManager.GetFocusEnemy<Turret>(transform.position, minRadius.Value, maxRadius.Value);
 
 		// une tourelle ennemie ne bouge pas : la grenade est sûre de toucher, les tourelles suivantes peuvent viser autre chose quand les dégâts réservés suffisent à la détruire
-		Turret shooter = GetComponent<Turret>();
-		if (enemy != null && shooter != null) armyManager.ReserveRocketShot(shooter, enemy.GetComponent<ArmyElement>());
+		if (enemy != null) armyManager.ReserveRocketShot(shooter, enemy.GetComponent<ArmyElement>());
 
-		return enemy;
+		return TransformOf(enemy);
 	}
 }

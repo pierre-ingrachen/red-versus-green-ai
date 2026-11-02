@@ -78,21 +78,22 @@ Pour modifier un arbre sans l'éditeur : éditer le JSON dans `.asset`, puis ouv
 - `Assets/Behavior Designer/` : plugin tiers (ne pas modifier).
 - `Assets/Gfx/`, `Assets/JMO Assets/`, `Assets/Materials/`, `Assets/Meshes/` : assets graphiques.
 - `Library/`, `Temp/`, `Logs/`, `UserSettings/` : générés par Unity (ignorer ; retirer `Library` de l'archive finale).
-- Dossier non versionné (pas de dépôt git pour l'instant).
 
 ## Pistes stratégiques (à explorer pour l'IA rouge)
 Hors-nombre (13+6 contre 19+9), il faut compenser par la tactique : focus-fire sur une cible commune plutôt que cibles aléatoires, exploitation des terrasses et de l'abri des obstacles, priorité aux tourelles ennemies (dégâts de zone, 100 PV) ou aux drones isolés, tourelles qui visent des zones où se regroupent les ennemis (la grenade met 4 s à arriver : anticiper le mouvement), drones qui restent hors du Min Radius des tourelles ennemies, repli des unités blessées, utilisation de `ArmyManagerRed` pour coordonner (attribution des cibles, évitement du sur-ciblage).
 
 ## Suivi du travail
 - **`JOURNAL_MODIFICATIONS.md`** : à mettre à jour à chaque modification de l'IA rouge (statut ✅ validée / 🟡 à valider / ❌ abandonnée, fichiers touchés, résultats). Sert de base aux ReleaseNotes. Ne marquer ✅ qu'après un test en jeu.
-- Pas de git : avant de modifier un fichier important, en garder une copie dans le scratchpad.
+- **Git** (dépôt local, branche `main`, pas de remote) : Claude peut commiter. **Ne jamais ajouter de ligne `Co-Authored-By` ni de mention de Claude dans les commits** (consigne explicite de l'utilisateur, prioritaire sur l'attribution par défaut). Un commit par modification cohérente, message en français, et mettre à jour `JOURNAL_MODIFICATIONS.md` dans le même commit. Ne pas pousser.
+  - Versionné : `Assets/`, `Packages/`, `ProjectSettings/`, `.gitignore`, `CLAUDE.md`, `JOURNAL_MODIFICATIONS.md`, et plus tard les ReleaseNotes/CSV. Ignoré : `Library/`, `Temp/`, `Logs/`, `UserSettings/`, `*.csproj`/`*.sln*`, `.vscode/`, `.claude/` (voir `.gitignore`). `Library` est de toute façon à retirer de l'archive livrée.
+  - Le premier commit contient l'état d'origine du projet fourni (`git diff <premier commit>` donne tout ce qu'on a changé).
 - Fichiers `.cs` anciens en **Windows-1252** (ex. `ArmyManagerRed.cs`) : les éditer avec un script qui conserve l'encodage, pas avec Edit/Write.
 - Vérifier la compilation sans Unity : copier `Assembly-CSharp.csproj` dans le scratchpad, passer les `Compile Include`/`HintPath` relatifs en chemins absolus, y ajouter les nouveaux fichiers, puis `…/Unity.app/Contents/Resources/Scripting/DotNetSdk/dotnet build`. Unity ne recompile qu'au retour au premier plan (et pas en mode Play) ; son journal est `Logs/Editor.log` dans le projet.
 - Unity est ouvert sur le projet pendant le travail : impossible de lancer un second Unity dessus (verrou). Pour des simulations automatiques, il faudrait travailler sur une copie du projet en `-batchmode`.
 
 ## État d'avancement
 - [x] Lire/analyser les arbres actuels
-- [~] Focus fire drones + tourelles (`SelectFocusEnemy.cs`, `ArmyManagerRed`, arbres rouges) : implémenté et compilé, **à tester en jeu** (voir journal)
+- [~] Focus fire (`SelectFocusEnemy.cs`, `ArmyManagerRed`, arbres rouges) : tourelles OK en jeu ; drones corrigés (plus proche, gardé jusqu'à la mort) et défense des tourelles ajoutée : compilé, **à tester en jeu** (voir journal)
 - [ ] Autres améliorations de `DroneRedBehavior` / `TurretRedBehavior` / `ArmyManagerRed`
 - [ ] Simuler 20 batailles et remplir le CSV
 - [ ] ReleaseNotes + vidéo + archive

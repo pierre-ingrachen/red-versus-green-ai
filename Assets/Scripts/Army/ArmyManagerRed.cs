@@ -26,6 +26,8 @@ public class ArmyManagerRed : ArmyManager
 
 	// cible actuellement focalisée, par type d'unité (Drone, Turret)
 	readonly Dictionary<System.Type, ArmyElement> m_Focus = new Dictionary<System.Type, ArmyElement>();
+	// point de visée (invisible) de chaque tourelle : sert à viser l'endroit où un drone sera, et non où il est
+	readonly Dictionary<Turret, Transform> m_AimPoints = new Dictionary<Turret, Transform>();
 	// dégâts de grenades "réservés" sur une cible : tirs déjà décidés mais pas encore tombés
 	readonly Dictionary<ArmyElement, List<ShotReservation>> m_Reservations = new Dictionary<ArmyElement, List<ShotReservation>>();
 
@@ -81,6 +83,59 @@ public class ArmyManagerRed : ArmyManager
 		ArmyElement target = best != null ? best : doomed;
 		if (target != null) m_Focus[typeof(T)] = target;
 		return target != null ? target.gameObject : null;
+	}
+
+	/// <summary>
+	/// Ennemi de type T le plus proche de fromPos, dans l'anneau [minRadius, maxRadius].
+	/// Si current (la cible précédente de l'appelant) est toujours vivante, on la garde : on tire dessus jusqu'à sa mort.
+	/// </summary>
+	public GameObject GetNearestEnemy<T>(Vector3 fromPos, float minRadius, float maxRadius, ArmyElement current) where T : ArmyElement
+	{
+		if (current != null && current is T && current.Health > 0 && current.ArmyManager != this) return current.gameObject;
+
+		ArmyElement nearest = null;
+		float nearestDistance = float.MaxValue;
+		foreach (T enemy in GetAllEnemiesOfType<T>(false))
+		{
+			if (enemy.Health <= 0) continue;
+
+			float distance = Vector3.Distance(fromPos, enemy.transform.position);
+			if (distance <= minRadius || distance >= maxRadius) continue;
+
+			if (distance < nearestDistance) { nearest = enemy; nearestDistance = distance; }
+		}
+		return nearest != null ? nearest.gameObject : null;
+	}
+
+	// position probable d'un ennemi dans delay secondes, d'après sa vitesse (et en s'arrêtant à son point d'arrivée)
+	Vector3 PredictPosition(ArmyElement enemy, float delay)
+	{
+		Vector3 position = enemy.transform.position;
+		NavMeshAgent agent = enemy.GetComponent<NavMeshAgent>();
+		if (agent == null || !agent.isOnNavMesh || agent.velocity.sqrMagnitude < 0.01f) return position;
+
+		float travel = agent.velocity.magnitude * delay;
+		if (!agent.pathPending) travel = Mathf.Min(travel, Mathf.Max(0, agent.remainingDistance - agent.stoppingDistance));
+		return position + agent.velocity.normalized * travel;
+	}
+
+	/// <summary>
+	/// Point à viser pour que la grenade de shooter tombe là où l'ennemi sera à l'arrivée (rotation de la tourelle + 4 s de vol).
+	/// </summary>
+	public Transform GetAimPoint(Turret shooter, ArmyElement enemy)
+	{
+		Transform aimPoint;
+		if (!m_AimPoints.TryGetValue(shooter, out aimPoint) || aimPoint == null)
+		{
+			aimPoint = new GameObject("AimPoint " + shooter.name).transform;
+			aimPoint.SetParent(transform);
+			m_AimPoints[shooter] = aimPoint;
+		}
+
+		Vector3 toEnemy = enemy.transform.position - shooter.m_TurretHead.position;
+		float rotationDuration = Vector3.Angle(shooter.m_TurretHead.forward, toEnemy) / shooter.m_RotationSpeed;
+		aimPoint.position = PredictPosition(enemy, rotationDuration + k_RocketTravelDuration);
+		return aimPoint;
 	}
 
 	/// <summary>
