@@ -1,5 +1,7 @@
 # RED versus Green — contexte projet
 
+> **Reprise du travail : lire aussi `HANDOFF.md`** (état, méthode de travail, outillage, pièges, mécaniques mesurées, 16 pistes) puis `JOURNAL_MODIFICATIONS.md` (historique et résultats).
+
 Projet TP EPF 5A, module « Real Time Decision Making in Video Game » (David Bilemdjian), année 2026-2027.
 Unity 6000.6.0f1 (tous les membres de l'équipe sur la même version), C#, plugin **Behavior Designer** (Opsive).
 Groupes de 4. Mini-jeu « RTS Wargame » : deux armées IA s'affrontent, le joueur ne contrôle rien.
@@ -67,8 +69,8 @@ Les arbres sont des assets `ExternalBehavior` YAML contenant un champ `JSONSeria
 - `Assets/Scripts/MyBehaviorTrees/TurretRedBehavior.asset` ← à améliorer
 - `DroneGreenBehavior.asset`, `TurretGreenBehavior.asset`, `FlyingDroneGreenBehavior.asset` ← NE PAS TOUCHER
 
-Arbre drone actuel (basique) : Repeater(∞) → Sequence[ RandomSelector(SelectEnemyDrone | SelectEnemyTurret), MySeek, MySlerpRotateAroundY, DroneShoot, Wait ].
-Arbre tourelle actuel : Select Enemy (priorité tourelles) → TurretSeekTarget → TurretShoot → Wait.
+Arbres d'origine (et arbres verts, inchangés) : drone = Repeater(∞) → Sequence[ RandomSelector(SelectEnemyDrone | SelectEnemyTurret), MySeek, MySlerpRotateAroundY, DroneShoot, Wait ] ; tourelle = Select Enemy (priorité tourelles) → TurretSeekTarget → TurretShoot → Wait.
+**Arbres rouges actuels** (détail et fichiers : `HANDOFF.md` §5) : drone = Repeater → Sequence[ Selector(SelectFocusEnemyTurret, SelectFocusEnemyDrone), « Move only if needed »[ IsTargetInRange 16 m | MySeek ], StrafeAim, DroneShoot, ParallelSelector(Wait, StrafeAround) ] ; tourelle = mêmes nœuds `SelectFocusEnemy*` (visée de zone) puis `TurretSeekTarget`, `TurretShoot`, `Wait`.
 
 Pour modifier un arbre sans l'éditeur : éditer le JSON dans `.asset`, puis ouvrir Unity (réimport). Garder les `ID` uniques et la structure `Children` cohérente ; de préférence demander à l'utilisateur de vérifier l'arbre dans la fenêtre Behavior Designer après modification. Si l'utilisateur a modifié l'arbre dans l'éditeur, relire le fichier avant de l'éditer (Unity sauvegarde dans le `.asset` seulement après Ctrl+S / Save Project).
 
@@ -79,21 +81,29 @@ Pour modifier un arbre sans l'éditeur : éditer le JSON dans `.asset`, puis ouv
 - `Assets/Gfx/`, `Assets/JMO Assets/`, `Assets/Materials/`, `Assets/Meshes/` : assets graphiques.
 - `Library/`, `Temp/`, `Logs/`, `UserSettings/` : générés par Unity (ignorer ; retirer `Library` de l'archive finale).
 
-## Pistes stratégiques (à explorer pour l'IA rouge)
-Hors-nombre (13+6 contre 19+9), il faut compenser par la tactique : focus-fire sur une cible commune plutôt que cibles aléatoires, exploitation des terrasses et de l'abri des obstacles, priorité aux tourelles ennemies (dégâts de zone, 100 PV) ou aux drones isolés, tourelles qui visent des zones où se regroupent les ennemis (la grenade met 4 s à arriver : anticiper le mouvement), drones qui restent hors du Min Radius des tourelles ennemies, repli des unités blessées, utilisation de `ArmyManagerRed` pour coordonner (attribution des cibles, évitement du sur-ciblage).
+## Pistes stratégiques
+**Voir `HANDOFF.md` §6** : 16 pistes classées (mesure par séries, graines communes, fonctionnalité de soin, abris/ligne de vue, réglage fin, esquive des missiles, etc.) et §4 pour ce que les simulations ont appris des mécaniques du jeu.
+
+## Où en est le projet (résumé ; passation complète : `HANDOFF.md`)
+- L'IA rouge **gagne environ une bataille sur deux** (1 victoire sur 2 batailles simulées), contre 0 victoire au départ. Le duel de drones sans tourelles est gagné (2 sur 2). Taux réel inconnu : il faut une série (le lot de 20 batailles exigé pour la livraison). Résultats détaillés : `JOURNAL_MODIFICATIONS.md`.
+- Pas encore fait : lot de 20 batailles + CSV, fonctionnalité différenciante (second objectif), ReleaseNotes, vidéo, archive, vérification dans l'éditeur Unity.
 
 ## Suivi du travail
 - **`JOURNAL_MODIFICATIONS.md`** : à mettre à jour à chaque modification de l'IA rouge (statut ✅ validée / 🟡 à valider / ❌ abandonnée, fichiers touchés, résultats). Sert de base aux ReleaseNotes. Ne marquer ✅ qu'après un test en jeu.
 - **Git** (dépôt local, branche `main`, pas de remote) : Claude peut commiter. **Ne jamais ajouter de ligne `Co-Authored-By` ni de mention de Claude dans les commits** (consigne explicite de l'utilisateur, prioritaire sur l'attribution par défaut). Un commit par modification cohérente, message en français, et mettre à jour `JOURNAL_MODIFICATIONS.md` dans le même commit. Ne pas pousser.
-  - Versionné : `Assets/`, `Packages/`, `ProjectSettings/`, `.gitignore`, `CLAUDE.md`, `JOURNAL_MODIFICATIONS.md`, et plus tard les ReleaseNotes/CSV. Ignoré : `Library/`, `Temp/`, `Logs/`, `UserSettings/`, `*.csproj`/`*.sln*`, `.vscode/`, `.claude/` (voir `.gitignore`). `Library` est de toute façon à retirer de l'archive livrée.
+  - Versionné : `Assets/`, `Packages/`, `ProjectSettings/`, `.gitignore`, `CLAUDE.md`, `JOURNAL_MODIFICATIONS.md`, `HANDOFF.md`, et plus tard les ReleaseNotes/CSV. Ignoré : `Library/`, `Temp/`, `Logs/`, `UserSettings/`, `*.csproj`/`*.sln*`, `.vscode/`, `.claude/`, `sim-tools/` (voir `.gitignore`). `Library` est de toute façon à retirer de l'archive livrée.
   - Le premier commit contient l'état d'origine du projet fourni (`git diff <premier commit>` donne tout ce qu'on a changé).
 - Fichiers `.cs` anciens en **Windows-1252** (ex. `ArmyManagerRed.cs`) : les éditer avec un script qui conserve l'encodage, pas avec Edit/Write.
 - Vérifier la compilation sans Unity : copier `Assembly-CSharp.csproj` dans le scratchpad, passer les `Compile Include`/`HintPath` relatifs en chemins absolus, y ajouter les nouveaux fichiers, puis `…/Unity.app/Contents/Resources/Scripting/DotNetSdk/dotnet build`. Unity ne recompile qu'au retour au premier plan (et pas en mode Play) ; son journal est `Logs/Editor.log` dans le projet.
-- Unity est ouvert sur le projet pendant le travail : impossible de lancer un second Unity dessus (verrou). Pour des simulations automatiques, il faudrait travailler sur une copie du projet en `-batchmode`.
+- **Simulation hors éditeur** : `sim-tools/run_sim.sh` (dossier **hors git**, voir `sim-tools/README.md` et `HANDOFF.md` §3.1) travaille sur une copie du projet (dans `/private/tmp/rvg_sim`), construit un exécutable Mac, lance les batailles sans fenêtre en priorité minimale et écrit un suivi toutes les 2,5 s. C'est ainsi que tout a été mesuré. Unity peut rester ouvert (la simulation utilise une copie) mais Unity Hub doit l'être (licence).
+- **Une seule bataille à la fois** par défaut (consigne de l'utilisateur) ; pour conclure sur de petits effets il faut des séries : l'expliquer et demander son accord avant de lancer un lot.
+- Garde-fou de conformité avant livraison : le `git diff` du commit `053d013` vers `HEAD` doit être vide sur les prefabs, la scène, `ProjectSettings`, l'armée verte et les scripts de base des unités (commande dans `HANDOFF.md` §3.4).
 
 ## État d'avancement
-- [x] Lire/analyser les arbres actuels
-- [~] Focus fire (`SelectFocusEnemy.cs`, `ArmyManagerRed`, arbres rouges) : tourelles OK en jeu ; drones corrigés (plus proche, gardé jusqu'à la mort) et défense des tourelles ajoutée : compilé, **à tester en jeu** (voir journal)
-- [ ] Autres améliorations de `DroneRedBehavior` / `TurretRedBehavior` / `ArmyManagerRed`
-- [ ] Simuler 20 batailles et remplir le CSV
-- [ ] ReleaseNotes + vidéo + archive
+- [x] Analyse des arbres, outil de simulation, journal, git
+- [x] IA rouge : tourelles à visée de zone, drones sur les tourelles d'abord, déplacement perpendiculaire corrigé, tir sans approche, espacement, esquive des grenades (voir journal, sections 1 à 18)
+- [~] Fiabiliser la victoire (≈ 1 sur 2 aujourd'hui) : pistes dans `HANDOFF.md` §6
+- [ ] Lot de 20 batailles + CSV (Annexe B) — à valider avec l'utilisateur avant de lancer
+- [ ] Fonctionnalité différenciante (second objectif) — pas commencée (piste de soin proposée)
+- [ ] Vérification dans l'éditeur Unity (arbres dans Behavior Designer, console vide)
+- [ ] ReleaseNotes + vidéo + archive sans `Library`

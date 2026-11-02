@@ -203,4 +203,4 @@ Une bataille par ligne (bruité). `vert restant` = ce qu'il reste à l'armée ve
 ---
 
 ## Idées restantes (backlog)
-Esquive des grenades, abris/ligne de vue, tir avec avance des drones, point d'impact optimal des grenades (viser le centre d'un groupe), rôles et phases dans `ArmyManagerRed`, outil de simulation accélérée avec journal CSV. Voir la discussion initiale.
+Voir **`HANDOFF.md` §6** : 16 pistes classées (mesure par séries et graines communes en premier, fonctionnalité de soin, abris et ligne de vue, réglage fin des constantes, esquive des missiles, nettoyage du code mort, etc.).
