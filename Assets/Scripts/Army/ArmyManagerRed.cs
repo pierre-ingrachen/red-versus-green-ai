@@ -32,6 +32,21 @@ public class ArmyManagerRed : ArmyManager
 	// pour chaque ennemi, les unités rouges qui lui sont assignées
 	readonly Dictionary<ArmyElement, List<ArmyElement>> m_Assignments = new Dictionary<ArmyElement, List<ArmyElement>>();
 
+	const float k_DangerRadius = 7f;   // rayon de dégâts de la grenade (Annexe A : 5 m) + marge
+	const float k_FleeMaxDelay = 2f;    // on ne s'écarte que dans les 2 dernières secondes avant l'impact
+	const float k_FleeMinDelay = 0.2f;  // trop tard pour fuir en dessous
+
+	struct IncomingImpact
+	{
+		public Vector3 Position;
+		public float Time; // date d'impact
+	}
+
+	// points d'impact des grenades ennemies en vol, recalculés au plus tous les 0,1 s
+	readonly List<IncomingImpact> m_Impacts = new List<IncomingImpact>();
+	float m_ImpactsRefreshTime = -1;
+	string m_RedTag;
+
 	// point de visée (invisible) de chaque tourelle : sert à viser l'endroit où un drone sera, et non où il est
 	readonly Dictionary<Turret, Transform> m_AimPoints = new Dictionary<Turret, Transform>();
 	// dégâts de grenades "réservés" sur une cible : tirs déjà décidés mais pas encore tombés
@@ -141,6 +156,82 @@ public class ArmyManagerRed : ArmyManager
 		}
 		group.Add(caller);
 		return chosen.gameObject;
+	}
+
+	/// <summary>
+	/// Phase 2 de la bataille : toutes nos tourelles sont détruites alors qu'il reste des drones ennemis. Les tourelles ennemies ne ciblent plus nos tourelles
+	/// mais nos drones (qui esquivent leurs grenades) : les drones rouges passent au combat contre les drones ennemis.
+	/// </summary>
+	public bool ShouldFightEnemyDrones()
+	{
+		if (m_ArmyElements.Any(element => element is Turret)) return false;
+		return GetAllEnemiesOfType<Drone>(false).Any(enemy => enemy.Health > 0);
+	}
+
+	// le chef d'état-major voit la trajectoire des grenades : on intègre la balistique (vitesse actuelle + gravité) jusqu'au sol
+	void RefreshImpacts()
+	{
+		if (Time.time - m_ImpactsRefreshTime < 0.1f) return;
+		m_ImpactsRefreshTime = Time.time;
+		m_Impacts.Clear();
+
+		if (m_RedTag == null)
+		{
+			Component first = m_ArmyElements.OfType<Component>().FirstOrDefault(c => c != null);
+			if (first == null) return;
+			m_RedTag = first.tag;
+		}
+
+		const float step = 0.05f;
+		foreach (Rocket rocket in FindObjectsByType<Rocket>(FindObjectsSortMode.None))
+		{
+			if (rocket.CompareTag(m_RedTag)) continue;
+			Rigidbody body = rocket.GetComponent<Rigidbody>();
+			if (body == null) continue;
+
+			Vector3 position = body.position;
+			Vector3 velocity = body.linearVelocity;
+			for (float t = step; t < 5f; t += step)
+			{
+				velocity += Physics.gravity * step;
+				position += velocity * step;
+
+				Vector3 ground = Vector3.zero, normal = Vector3.zero;
+				if (TerrainManager.Instance.GetVerticallyAlignedPositionOnTerrain(position, ref ground, ref normal) && position.y <= ground.y + 1f)
+				{
+					m_Impacts.Add(new IncomingImpact { Position = position, Time = Time.time + t });
+					break;
+				}
+			}
+		}
+	}
+
+	/// <summary>
+	/// Vrai si une grenade ennemie va tomber à moins de k_DangerRadius de position dans les prochaines secondes (et qu'il est encore temps de s'écarter).
+	/// </summary>
+	public bool TryGetIncomingImpact(Vector3 position, out Vector3 impact)
+	{
+		RefreshImpacts();
+
+		impact = Vector3.zero;
+		float nearest = float.MaxValue;
+		foreach (IncomingImpact incoming in m_Impacts)
+		{
+			float remaining = incoming.Time - Time.time;
+			if (remaining < k_FleeMinDelay || remaining > k_FleeMaxDelay) continue;
+
+			float distance = Vector3.Distance(position, incoming.Position);
+			if (distance < k_DangerRadius && distance < nearest) { nearest = distance; impact = incoming.Position; }
+		}
+		return nearest < float.MaxValue;
+	}
+
+	/// <summary>Point où se placer pour sortir de la zone de dégâts d'une grenade qui tombe en impact.</summary>
+	public Vector3 EscapePoint(Vector3 position, Vector3 impact)
+	{
+		Vector3 away = Vector3.ProjectOnPlane(position - impact, Vector3.up);
+		if (away.sqrMagnitude < 0.01f) away = Vector3.right;
+		return impact + away.normalized * (k_DangerRadius + 3f);
 	}
 
 	/// <summary>

@@ -11,6 +11,7 @@ public abstract class StrafeMovement : Action
 	public SharedTransform target;
 
 	protected NavMeshAgent m_Agent;
+	ArmyElement m_ArmyElement;
 	float m_Direction;
 	float m_NextFlip;
 	float m_NextRepath;
@@ -18,6 +19,7 @@ public abstract class StrafeMovement : Action
 	public override void OnAwake()
 	{
 		m_Agent = GetComponent<NavMeshAgent>();
+		m_ArmyElement = GetComponent<ArmyElement>();
 	}
 
 	public override void OnStart()
@@ -32,6 +34,7 @@ public abstract class StrafeMovement : Action
 	// avance sur un cercle autour de la cible, en changeant de sens de temps en temps pour ne pas être prévisible
 	protected void Strafe()
 	{
+		if (Dodge()) return;
 		if (!target.Value) return;
 
 		if (Time.time >= m_NextFlip)
@@ -49,5 +52,21 @@ public abstract class StrafeMovement : Action
 
 		NavMeshHit hit;
 		if (NavMesh.SamplePosition(next, out hit, 3f, NavMesh.AllAreas)) m_Agent.SetDestination(hit.position);
+	}
+
+	// une grenade ennemie va tomber sur nous : on s'écarte de la zone d'impact (le chef d'état-major voit sa trajectoire)
+	bool Dodge()
+	{
+		ArmyManagerRed armyManager = m_ArmyElement != null ? m_ArmyElement.ArmyManager as ArmyManagerRed : null;
+		Vector3 impact;
+		if (armyManager == null || !armyManager.TryGetIncomingImpact(transform.position, out impact)) return false;
+
+		if (Time.time >= m_NextRepath)
+		{
+			m_NextRepath = Time.time + 0.1f;
+			NavMeshHit hit;
+			if (NavMesh.SamplePosition(armyManager.EscapePoint(transform.position, impact), out hit, 3f, NavMesh.AllAreas)) m_Agent.SetDestination(hit.position);
+		}
+		return true;
 	}
 }

@@ -66,6 +66,9 @@ public class SelectFocusEnemyTurret : SelectFocusEnemy
 {
 	protected override Transform Select(ArmyManagerRed armyManager)
 	{
+		// phase 2 : plus de tourelles rouges, les drones rouges combattent d'abord les drones ennemis (cette tâche échoue, l'arbre passe à SelectFocusEnemyDrone)
+		if (GetComponent<Turret>() == null && armyManager.ShouldFightEnemyDrones()) return null;
+
 		// drones et tourelles rouges se partagent les tourelles ennemies par groupes : chacune reçoit juste assez de salves (10 PV chacune) pour être détruite
 		return TransformOf(armyManager.AssignTarget<Turret>(GetComponent<ArmyElement>(), minRadius.Value, maxRadius.Value, PreviousTarget()));
 	}

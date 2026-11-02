@@ -119,6 +119,17 @@ Les tourelles rouges utilisent maintenant `AssignTarget<Turret>` comme les drone
 - Une fois les tourelles vertes détruites, il reste 19 drones verts intacts face à quelques drones rouges blessés : défaite.
 - Pistes non encore testées : esquive des grenades à partir de leur trajectoire (visible par le chef d'état-major), attaque des tourelles verte par leur flanc/angle mort, retarder la mort des tourelles rouges, mieux comprendre pourquoi le débit de destruction est à ~50 % du théorique (trajets, portée, alignement).
 
+## 9. Drones : esquive des grenades ennemies — 🟡 Effet possible, dans le bruit
+Le chef d'état-major voit les grenades en vol : `ArmyManagerRed.TryGetIncomingImpact()` intègre leur balistique (vitesse + gravité jusqu'au sol, via `TerrainManager`) pour prédire leur point d'impact, recalculé tous les 0,1 s. Les drones en déplacement circulaire (`StrafeMovement.Dodge()`) sortent de la zone de 7 m (rayon de dégâts 5 m + marge) dans les 2 dernières secondes avant l'impact, avec `EscapePoint()`. Aucune caractéristique des unités n'est modifiée.
+- Test complet (v10) : 575 PV de drones rouges à 25 s (270 dans la v9 au même moment). Mais la bataille suivante (v11, même esquive) n'en a que 375 : **l'écart entre deux batailles est du même ordre que l'effet recherché**. Il faudrait plusieurs batailles par version pour conclure.
+
+## 10. Drones : combat contre les drones ennemis quand nos tourelles sont mortes — 🟡 Non démontré
+`ArmyManagerRed.ShouldFightEnemyDrones()` : quand toutes les tourelles rouges sont détruites et qu'il reste des drones ennemis, `SelectFocusEnemyTurret` échoue pour les drones, qui passent à `SelectFocusEnemyDrone` (achever les plus blessés). Idée : à ce stade les tourelles vertes ne ciblent plus nos tourelles mais nos drones, qui esquivent leurs grenades. Test (v11) : défaite à 39 s, aucun drone vert détruit ; l'effondrement des drones rouges a commencé avant la bascule.
+
+## Pistes 2 et 3 (évaluées sans développement)
+- **Débit de destruction des tourelles vertes** : mesuré à ~30 PV/s, soit à peu près le débit théorique de 13 drones (une salve de 10 PV toutes les ~3,5 s : Wait de 1 à 2 s imposé). Pas d'amélioration possible par le ciblage. Détruire les 900 PV de tourelles vertes avant la mort de nos tourelles (~15 à 20 s) demanderait le double.
+- **Retarder la mort de nos tourelles** : leurs positions sont fixes et plusieurs sont à moins de 5 m les unes des autres (une grenade verte en touche plusieurs). Pas de levier stratégique identifié.
+
 ---
 
 ## Résultats de simulation
@@ -140,6 +151,8 @@ Une bataille par ligne (bruité). `vert restant` = ce qu'il reste à l'armée ve
 | 7. Tourelles d'abord + blessés en priorité | 48 s | défaite | 19 / 0 / 870 | tourelles détruites à 40 s, drones rouges épuisés |
 | 8. + légitime défense | 37 s | défaite | 16 / 6 / 1050 | abandonné |
 | 9. Partage par groupes (tourelles aussi) | 39 s | défaite | 19 / 1 / 960 | équivalent à 7 |
+| 10. + esquive des grenades | 40 s | défaite | 19 / 0 / 875 | drones rouges à 575 PV à 25 s |
+| 11. + combat de drones en phase 2 | 39 s | défaite | 19 / 2 / 940 | drones rouges à 375 PV à 25 s (même esquive : bruit) |
 
 ---
 
