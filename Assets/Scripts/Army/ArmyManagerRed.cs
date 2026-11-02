@@ -26,17 +26,17 @@ public class ArmyManagerRed : ArmyManager
 
 	// cible actuellement focalisée, par type d'unité (Drone, Turret)
 	readonly Dictionary<System.Type, ArmyElement> m_Focus = new Dictionary<System.Type, ArmyElement>();
+	const int k_MaxDronesPerTurret = 4;         // groupes restreints sur les tourelles : les drones restent dispersés (les grenades font des dégâts de zone de 5 m)
 	const float k_DamagePerSalvo = 10f;         // une salve de drone = 2 missiles de 5 PV (Annexe A) : sûrs de toucher une tourelle fixe
 	const float k_ExpectedDamagePerDrone = 7f; // une salve de drone = 10 PV (2 missiles de 5), dont on compte environ 70 % de touches
 
 	// pour chaque ennemi, les unités rouges qui lui sont assignées
 	readonly Dictionary<ArmyElement, List<ArmyElement>> m_Assignments = new Dictionary<ArmyElement, List<ArmyElement>>();
 
-	const float k_DangerRadius = 7f;   // rayon de dégâts de la grenade (Annexe A : 5 m) + marge
-	const float k_FleeMaxDelay = 2f;    // on ne s'écarte que dans les 2 dernières secondes avant l'impact
+	const float k_FleeMaxDelay = 3f;    // on ne s'écarte que dans les 3 dernières secondes avant l'impact
 	const float k_FleeMinDelay = 0.2f;  // trop tard pour fuir en dessous
 
-	struct IncomingImpact
+	public struct IncomingImpact
 	{
 		public Vector3 Position;
 		public float Time; // date d'impact
@@ -142,7 +142,7 @@ public class ArmyManagerRed : ArmyManager
 		ArmyElement chosen = null;
 		foreach (T enemy in candidates)
 		{
-			if (AssignedCount(enemy) < Mathf.CeilToInt(enemy.Health / (enemy is Turret ? k_DamagePerSalvo : k_ExpectedDamagePerDrone))) { chosen = enemy; break; }
+			if (AssignedCount(enemy) < (enemy is Turret ? Mathf.Min(k_MaxDronesPerTurret, Mathf.CeilToInt(enemy.Health / k_DamagePerSalvo)) : Mathf.CeilToInt(enemy.Health / k_ExpectedDamagePerDrone))) { chosen = enemy; break; }
 		}
 		if (chosen == null && candidates.Count > 0) chosen = candidates[0]; // tous les ennemis ont leur compte : on renforce le plus avancé
 
@@ -166,6 +166,50 @@ public class ArmyManagerRed : ArmyManager
 	{
 		if (m_ArmyElements.Any(element => element is Turret)) return false;
 		return GetAllEnemiesOfType<Drone>(false).Any(enemy => enemy.Health > 0);
+	}
+
+	/// <summary>Position du drone rouge le plus proche de position (sans compter celui qui s'y trouve), s'il est à moins de range.</summary>
+	public bool TryGetNearestFriendlyDrone(Vector3 position, float range, out Vector3 friendPosition)
+	{
+		friendPosition = Vector3.zero;
+		float nearest = range;
+		foreach (IArmyElement element in m_ArmyElements)
+		{
+			Drone drone = element as Drone;
+			if (drone == null) continue;
+
+			float distance = Vector3.Distance(position, drone.transform.position);
+			if (distance < 0.5f) continue; // lui-même
+			if (distance < nearest) { nearest = distance; friendPosition = drone.transform.position; }
+		}
+		return nearest < range;
+	}
+
+	// positions des drones ennemis, rafraîchies au plus tous les 0,1 s
+	readonly List<Vector3> m_EnemyDronePositions = new List<Vector3>();
+	float m_EnemyDronesRefreshTime = -1;
+
+	/// <summary>Position du drone ennemi vivant le plus proche de position, s'il est à moins de range.</summary>
+	public bool TryGetNearestEnemyDrone(Vector3 position, float range, out Vector3 enemyPosition)
+	{
+		if (Time.time - m_EnemyDronesRefreshTime >= 0.1f)
+		{
+			m_EnemyDronesRefreshTime = Time.time;
+			m_EnemyDronePositions.Clear();
+			foreach (Drone enemy in GetAllEnemiesOfType<Drone>(false))
+			{
+				if (enemy.Health > 0) m_EnemyDronePositions.Add(enemy.transform.position);
+			}
+		}
+
+		enemyPosition = Vector3.zero;
+		float nearest = range;
+		foreach (Vector3 candidate in m_EnemyDronePositions)
+		{
+			float distance = Vector3.Distance(position, candidate);
+			if (distance < nearest) { nearest = distance; enemyPosition = candidate; }
+		}
+		return nearest < range;
 	}
 
 	// le chef d'état-major voit la trajectoire des grenades : on intègre la balistique (vitesse actuelle + gravité) jusqu'au sol
@@ -207,31 +251,18 @@ public class ArmyManagerRed : ArmyManager
 	}
 
 	/// <summary>
-	/// Vrai si une grenade ennemie va tomber à moins de k_DangerRadius de position dans les prochaines secondes (et qu'il est encore temps de s'écarter).
+	/// Points d'impact des grenades ennemies en vol qui vont tomber dans les prochaines secondes (assez tard pour qu'il soit utile de les éviter).
 	/// </summary>
-	public bool TryGetIncomingImpact(Vector3 position, out Vector3 impact)
+	public void GetIncomingImpacts(List<IncomingImpact> result)
 	{
 		RefreshImpacts();
 
-		impact = Vector3.zero;
-		float nearest = float.MaxValue;
+		result.Clear();
 		foreach (IncomingImpact incoming in m_Impacts)
 		{
 			float remaining = incoming.Time - Time.time;
-			if (remaining < k_FleeMinDelay || remaining > k_FleeMaxDelay) continue;
-
-			float distance = Vector3.Distance(position, incoming.Position);
-			if (distance < k_DangerRadius && distance < nearest) { nearest = distance; impact = incoming.Position; }
+			if (remaining >= k_FleeMinDelay && remaining <= k_FleeMaxDelay) result.Add(incoming);
 		}
-		return nearest < float.MaxValue;
-	}
-
-	/// <summary>Point où se placer pour sortir de la zone de dégâts d'une grenade qui tombe en impact.</summary>
-	public Vector3 EscapePoint(Vector3 position, Vector3 impact)
-	{
-		Vector3 away = Vector3.ProjectOnPlane(position - impact, Vector3.up);
-		if (away.sqrMagnitude < 0.01f) away = Vector3.right;
-		return impact + away.normalized * (k_DangerRadius + 3f);
 	}
 
 	/// <summary>

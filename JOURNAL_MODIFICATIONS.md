@@ -130,6 +130,23 @@ Le chef d'état-major voit les grenades en vol : `ArmyManagerRed.TryGetIncomingI
 - **Débit de destruction des tourelles vertes** : mesuré à ~30 PV/s, soit à peu près le débit théorique de 13 drones (une salve de 10 PV toutes les ~3,5 s : Wait de 1 à 2 s imposé). Pas d'amélioration possible par le ciblage. Détruire les 900 PV de tourelles vertes avant la mort de nos tourelles (~15 à 20 s) demanderait le double.
 - **Retarder la mort de nos tourelles** : leurs positions sont fixes et plusieurs sont à moins de 5 m les unes des autres (une grenade verte en touche plusieurs). Pas de levier stratégique identifié.
 
+## 11. Correction du déplacement des drones — ✅ Vérifié (c'est la découverte la plus importante)
+Les simulations mesurent la vitesse moyenne des drones : **nos drones ne bougeaient pas** (~1 m/s au lieu de 10). `MySeek` règle la distance d'arrêt de l'agent à 6 m et sa vitesse à 10 m/s ; mes destinations de déplacement circulaire étaient à moins de 6 m, donc l'agent se croyait déjà arrivé. Corrigé dans `StrafeMovement` : destinations lointaines (14 m), distance d'arrêt à 0, et déplacement **perpendiculaire à la ligne de tir du drone vert le plus proche** (l'IA verte tire toujours vers la position actuelle de la cible, sans anticiper).
+- **Duel de drones sans tourelles (13 rouges contre 19 verts) : VICTOIRE**, 9 drones rouges restants (avant : défaite en 15 s). Pertes rouges 440 PV, pertes vertes 950 PV.
+
+## 12. Espacement entre drones, groupes limités sur les tourelles — 🟡
+Les grenades font des dégâts de zone de 5 m : chaque drone s'écarte du drone rouge le plus proche à moins de 14 m ; 4 drones au maximum par tourelle ennemie (`k_MaxDronesPerTurret`). Test isolé 13 drones contre les 9 tourelles vertes : pertes ~19 PV/s (avant ~23), peu d'écart.
+
+## 13. Esquive des grenades v2 — 🟡 Effet marginal
+Le chef d'état-major prédit les points d'impact de toutes les grenades en vol ; le drone calcule où il sera à chaque impact s'il continue et, si l'une le touche, choisit parmi 16 directions celle qui l'éloigne le mieux de tous les impacts. Activée (`k_DodgeGrenades`). Sans elle : défaite en 29 s ; avec : 38 s (une bataille chacune).
+
+## 14. Tirer sans se rapprocher si la cible est à moins de 16 m — 🟡
+Dans l'arbre : `Selector(Sequence(IsTargetInRange 16 m), MySeek)`. `MySeek` est inchangé quand il est utilisé. Comme `MySeek` est aussi ce qui règle la vitesse de l'agent (le prefab la laisse à 0,1), `StrafeMovement` applique la vitesse (10 m/s) et la vitesse angulaire (180°/s) de l'Annexe A.
+(Mesure de cadence de tir de la simulation : faussée, elle compte les missiles en vol à l'instant de l'échantillon ; ne pas s'y fier.)
+
+## 15. Tourelles d'abord avec toute la nouvelle mobilité — 🟡 Meilleur résultat à ce jour (défaite)
+Ordre des cibles des drones : tourelles ennemies, puis drones (et bascule sur les drones quand nos tourelles sont mortes). Bataille v18 : **86 s, 9 tourelles vertes détruites à 30 s**, 12 drones rouges encore en vie à 30 s, puis duel de drones : 9 drones verts détruits, défaite avec **9 drones verts (250 PV) restants**.
+
 ---
 
 ## Résultats de simulation
@@ -153,6 +170,10 @@ Une bataille par ligne (bruité). `vert restant` = ce qu'il reste à l'armée ve
 | 9. Partage par groupes (tourelles aussi) | 39 s | défaite | 19 / 1 / 960 | équivalent à 7 |
 | 10. + esquive des grenades | 40 s | défaite | 19 / 0 / 875 | drones rouges à 575 PV à 25 s |
 | 11. + combat de drones en phase 2 | 39 s | défaite | 19 / 2 / 940 | drones rouges à 375 PV à 25 s (même esquive : bruit) |
+| Duel de drones, déplacement corrigé | 52 s | **victoire** | 0 / – / 0 (rouge : 9 drones, 210 PV) | 13 contre 19, sans tourelles |
+| 12. Mobilité corrigée, tourelles d'abord | 43 s | défaite | 16 / 3 / 760 | |
+| 14. Drones d'abord, tir sans approche | 53 s | défaite | 18 / 6 / 1100 | |
+| **15. Tourelles d'abord + mobilité (v18)** | **86 s** | défaite | **9 / 0 / 250** | meilleure bataille complète |
 
 ---
 
