@@ -157,6 +157,13 @@ Les tourelles vertes sont espacées de 6 à 11 m seulement et la grenade fait de
 ## 17. Drones : préférer les drones ennemis à l'arrêt, réévaluer la cible à chaque tour — 🟡 Effet non démontré
 Pénalité de 40 sur le score d'un drone ennemi qui court (plus de 2 m/s) : un drone vert immobile (en train de tirer ou d'attendre) est une cible facile. Les tourelles ennemies restent gardées jusqu'à leur destruction. Bataille v19 : défaite en 57 s (dans le bruit).
 
+## 18. Pistes testées pour renforcer le duel de drones — ❌ Aucune ne bat la configuration actuelle
+Toutes mesurées sur une seule bataille ; les écarts restent dans le bruit, aucune n'a été conservée (code remis à l'état du commit v20).
+- **5 drones seulement sur les tourelles, les autres sur les drones dès le début** (v21) : défaite en 68 s ; les tourelles vertes survivent plus longtemps (3 encore à 25 s) et les 8 drones envoyés sur les drones n'en détruisent presque aucun.
+- **Distance de combat plus grande** (tir sans approche à 24 m au lieu de 16, orbite à 12-24 m au lieu de 6-18 m), mesurée sur le duel de drones sans tourelles : victoire en 85 s avec 5 drones restants, contre 60 s et 8 drones restants pour la référence (même ordre de grandeur, un peu moins bon).
+- **Ouverture de 7 s sur les drones verts avant de partir vers les tourelles** (v22) : défaite en 59 s ; un seul drone vert détruit pendant l'ouverture et les tourelles tombent plus tard.
+- Constat commun : le duel de drones isolé (13 contre 19) se gagne de façon reproductible (2 victoires sur 2 avec le code actuel, environ 2 pour 1 en PV), la bataille complète est à environ 1 victoire sur 2 (20 batailles nécessaires pour le taux réel).
+
 ---
 
 ## Résultats de simulation
@@ -188,6 +195,10 @@ Une bataille par ligne (bruité). `vert restant` = ce qu'il reste à l'armée ve
 | 17. + drones à l'arrêt en priorité (v19) | 57 s | défaite | 12 / 2 / 325 | |
 | **16. + tourelles rouges : visée de zone (v20)** | **84 s** | **VICTOIRE** | **0 / 0 / 0** (rouge : 7 drones, 145 PV) | première victoire en bataille complète |
 | 16b. Même configuration (v20b) | 125 s | défaite | 8 / 0 / 240 | tourelles vertes détruites à 25 s, duel de drones perdu de peu |
+| Duel de drones, référence (code v20) | 60 s | victoire | 0 / – / 0 (rouge : 8 drones, 175 PV) | sans tourelles |
+| Duel, distance de combat 24 m | 85 s | victoire | 0 / – / 0 (rouge : 5 drones, 150 PV) | pas mieux |
+| 18a. 5 drones sur les tourelles (v21) | 68 s | défaite | 12 / 2 / 355 | écarté |
+| 18b. Ouverture de 7 s sur les drones (v22) | 59 s | défaite | 11 / 1 / 295 | écarté |
 
 ---
 
