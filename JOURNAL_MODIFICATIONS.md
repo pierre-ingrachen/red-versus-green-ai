@@ -147,6 +147,16 @@ Dans l'arbre : `Selector(Sequence(IsTargetInRange 16 m), MySeek)`. `MySeek` est 
 ## 15. Tourelles d'abord avec toute la nouvelle mobilité — 🟡 Meilleur résultat à ce jour (défaite)
 Ordre des cibles des drones : tourelles ennemies, puis drones (et bascule sur les drones quand nos tourelles sont mortes). Bataille v18 : **86 s, 9 tourelles vertes détruites à 30 s**, 12 drones rouges encore en vie à 30 s, puis duel de drones : 9 drones verts détruits, défaite avec **9 drones verts (250 PV) restants**.
 
+## 16. Tourelles rouges : viser le point qui touche le plus de tourelles ennemies — 🟡 Première victoire (1 bataille)
+Les tourelles vertes sont espacées de 6 à 11 m seulement et la grenade fait des dégâts de zone de 5 m (le collider d'une tourelle ajoute environ 0,5 m de portée). Une grenade bien placée en touche deux. On l'avait déjà observé : 4 tourelles vertes détruites en 10 s par nos 6 tourelles, bien au-dessus de leur cadence théorique.
+- `ArmyManagerRed.GetSplashAimPoint()` : pour une tourelle rouge, parmi les positions des tourelles ennemies et les milieux de celles qui sont à moins de 11 m l'une de l'autre, on choisit le point qui inflige le plus de dégâts utiles (10 PV par tourelle touchée, moins ce qui est déjà réservé par des tirs en route), puis on réserve les dégâts sur chaque tourelle de la zone. Le point de visée est un `GameObject` invisible (comme pour le tir anticipé), donc `TurretSeekTarget` et `TurretShoot` ne sont pas modifiés.
+- Les drones rouges, eux, gardent la répartition par groupes (`AssignTarget`).
+- **Bataille v20 : VICTOIRE en 84 s, 7 drones rouges et 145 PV restants.** Les 9 tourelles vertes sont détruites à 25 s (30 à 35 s avant), avec 12 drones rouges encore en vie à 530 PV ; le duel de drones qui suit est gagné.
+- À confirmer : c'est une seule bataille ; les trois précédentes de la même configuration (sans le point de visée optimisé) étaient des défaites de peu (86 s, 75 s, 57 s).
+
+## 17. Drones : préférer les drones ennemis à l'arrêt, réévaluer la cible à chaque tour — 🟡 Effet non démontré
+Pénalité de 40 sur le score d'un drone ennemi qui court (plus de 2 m/s) : un drone vert immobile (en train de tirer ou d'attendre) est une cible facile. Les tourelles ennemies restent gardées jusqu'à leur destruction. Bataille v19 : défaite en 57 s (dans le bruit).
+
 ---
 
 ## Résultats de simulation
@@ -173,7 +183,10 @@ Une bataille par ligne (bruité). `vert restant` = ce qu'il reste à l'armée ve
 | Duel de drones, déplacement corrigé | 52 s | **victoire** | 0 / – / 0 (rouge : 9 drones, 210 PV) | 13 contre 19, sans tourelles |
 | 12. Mobilité corrigée, tourelles d'abord | 43 s | défaite | 16 / 3 / 760 | |
 | 14. Drones d'abord, tir sans approche | 53 s | défaite | 18 / 6 / 1100 | |
-| **15. Tourelles d'abord + mobilité (v18)** | **86 s** | défaite | **9 / 0 / 250** | meilleure bataille complète |
+| 15. Tourelles d'abord + mobilité (v18) | 86 s | défaite | 9 / 0 / 250 | |
+| 15b. Même configuration (v18b) | 75 s | défaite | 12 / 0 / 355 | reproductible |
+| 17. + drones à l'arrêt en priorité (v19) | 57 s | défaite | 12 / 2 / 325 | |
+| **16. + tourelles rouges : visée de zone (v20)** | **84 s** | **VICTOIRE** | **0 / 0 / 0** (rouge : 7 drones, 145 PV) | première victoire en bataille complète |
 
 ---
 

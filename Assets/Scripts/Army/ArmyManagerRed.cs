@@ -27,6 +27,8 @@ public class ArmyManagerRed : ArmyManager
 	// cible actuellement focalisée, par type d'unité (Drone, Turret)
 	readonly Dictionary<System.Type, ArmyElement> m_Focus = new Dictionary<System.Type, ArmyElement>();
 	const int k_MaxDronesPerTurret = 4;         // groupes restreints sur les tourelles : les drones restent dispersés (les grenades font des dégâts de zone de 5 m)
+	const float k_MovingTargetPenalty = 40f;   // un drone ennemi qui court est très difficile à toucher, un drone à l'arrêt (en train de tirer ou d'attendre) est une cible facile
+	const float k_SplashAimRadius = 5.5f;      // rayon de dégâts de la grenade (Annexe A : 5 m) + rayon du collider d'une tourelle
 	const float k_DamagePerSalvo = 10f;         // une salve de drone = 2 missiles de 5 PV (Annexe A) : sûrs de toucher une tourelle fixe
 	const float k_ExpectedDamagePerDrone = 7f; // une salve de drone = 10 PV (2 missiles de 5), dont on compte environ 70 % de touches
 
@@ -106,6 +108,12 @@ public class ArmyManagerRed : ArmyManager
 		return target != null ? target.gameObject : null;
 	}
 
+	static bool IsMoving(ArmyElement enemy)
+	{
+		NavMeshAgent agent = enemy.GetComponent<NavMeshAgent>();
+		return agent != null && agent.velocity.sqrMagnitude > 4f; // plus de 2 m/s
+	}
+
 	int AssignedCount(ArmyElement enemy)
 	{
 		List<ArmyElement> assigned;
@@ -121,7 +129,8 @@ public class ArmyManagerRed : ArmyManager
 	/// </summary>
 	public GameObject AssignTarget<T>(ArmyElement caller, float minRadius, float maxRadius, ArmyElement current) where T : ArmyElement
 	{
-		if (current != null && current is T && current.Health > 0 && current.ArmyManager != this) return current.gameObject;
+		// une tourelle ennemie est gardée jusqu'à sa destruction ; un drone ennemi est réévalué à chaque tour (il peut s'être mis à courir : on préfère ceux qui sont à l'arrêt)
+		if (current != null && current is T && !(current is Drone) && current.Health > 0 && current.ArmyManager != this) return current.gameObject;
 
 		foreach (ArmyElement deadEnemy in m_Assignments.Keys.Where(key => key == null).ToList()) m_Assignments.Remove(deadEnemy);
 		foreach (List<ArmyElement> assigned in m_Assignments.Values) assigned.Remove(caller);
@@ -136,7 +145,7 @@ public class ArmyManagerRed : ArmyManager
 			})
 			// drones ennemis : on achève d'abord les plus blessés (un ennemi mort ne tire plus), les plus proches départageant ;
 			// tourelles ennemies (fixes, intactes) : les plus avancées vers le centre de notre armée d'abord
-			.OrderBy(enemy => enemy is Drone ? enemy.Health + Vector3.Distance(callerPosition, enemy.transform.position) : Vector3.Distance(center, enemy.transform.position))
+			.OrderBy(enemy => enemy is Drone ? enemy.Health + Vector3.Distance(callerPosition, enemy.transform.position) + (IsMoving(enemy) ? k_MovingTargetPenalty : 0) : Vector3.Distance(center, enemy.transform.position))
 			.ToList();
 
 		ArmyElement chosen = null;
@@ -299,10 +308,7 @@ public class ArmyManagerRed : ArmyManager
 		return position + agent.velocity.normalized * travel;
 	}
 
-	/// <summary>
-	/// Point à viser pour que la grenade de shooter tombe là où l'ennemi sera à l'arrivée (rotation de la tourelle + 4 s de vol).
-	/// </summary>
-	public Transform GetAimPoint(Turret shooter, ArmyElement enemy)
+	Transform AimProxy(Turret shooter)
 	{
 		Transform aimPoint;
 		if (!m_AimPoints.TryGetValue(shooter, out aimPoint) || aimPoint == null)
@@ -311,6 +317,79 @@ public class ArmyManagerRed : ArmyManager
 			aimPoint.SetParent(transform);
 			m_AimPoints[shooter] = aimPoint;
 		}
+		return aimPoint;
+	}
+
+	/// <summary>
+	/// Point de visée d'une tourelle rouge sur les tourelles ennemies : la grenade fait des dégâts de zone, et les tourelles ennemies sont proches les unes des autres
+	/// (6 à 11 m) ; on vise donc le point (une tourelle, ou le milieu de deux) qui en touche le plus, en tenant compte des tirs déjà en route (réservations).
+	/// Renvoie null s'il n'y a aucune tourelle ennemie dans l'anneau [minRadius, maxRadius].
+	/// </summary>
+	public Transform GetSplashAimPoint(Turret shooter, float minRadius, float maxRadius)
+	{
+		List<Turret> enemies = GetAllEnemiesOfType<Turret>(false).Where(enemy => enemy.Health > 0).ToList();
+
+		List<Vector3> candidates = new List<Vector3>();
+		foreach (Turret enemy in enemies) candidates.Add(enemy.transform.position);
+		for (int i = 0; i < enemies.Count; i++)
+		{
+			for (int j = i + 1; j < enemies.Count; j++)
+			{
+				Vector3 a = enemies[i].transform.position, b = enemies[j].transform.position;
+				if (Vector3.Distance(a, b) < 2 * k_SplashAimRadius) candidates.Add((a + b) / 2);
+			}
+		}
+
+		bool found = false;
+		Vector3 best = Vector3.zero;
+		float bestValue = -1;
+		foreach (Vector3 point in candidates)
+		{
+			float distance = Vector3.Distance(shooter.transform.position, point);
+			if (distance <= minRadius || distance >= maxRadius) continue;
+
+			float value = 0;
+			foreach (Turret enemy in enemies)
+			{
+				if (FlatDistance(point, enemy.transform.position) <= k_SplashAimRadius)
+					value += Mathf.Clamp(enemy.Health - ReservedDamage(enemy), 0, k_RocketDamage); // dégâts utiles : pas la peine d'achever ce qui est déjà condamné
+			}
+			if (value > bestValue) { found = true; best = point; bestValue = value; }
+		}
+		if (!found) return null;
+
+		// ce tir va toucher toutes les tourelles de la zone : les suivants en tiennent compte
+		Vector3 toPoint = best - shooter.m_TurretHead.position;
+		float expire = Time.time + Vector3.Angle(shooter.m_TurretHead.forward, toPoint) / shooter.m_RotationSpeed + k_RocketTravelDuration;
+		foreach (Turret enemy in enemies)
+		{
+			if (FlatDistance(best, enemy.transform.position) > k_SplashAimRadius) continue;
+
+			List<ShotReservation> reservations;
+			if (!m_Reservations.TryGetValue(enemy, out reservations))
+			{
+				reservations = new List<ShotReservation>();
+				m_Reservations[enemy] = reservations;
+			}
+			reservations.Add(new ShotReservation { Damage = k_RocketDamage, ExpireTime = expire });
+		}
+
+		Transform aimPoint = AimProxy(shooter);
+		aimPoint.position = best;
+		return aimPoint;
+	}
+
+	static float FlatDistance(Vector3 a, Vector3 b)
+	{
+		return Vector2.Distance(new Vector2(a.x, a.z), new Vector2(b.x, b.z));
+	}
+
+	/// <summary>
+	/// Point à viser pour que la grenade de shooter tombe là où l'ennemi sera à l'arrivée (rotation de la tourelle + 4 s de vol).
+	/// </summary>
+	public Transform GetAimPoint(Turret shooter, ArmyElement enemy)
+	{
+		Transform aimPoint = AimProxy(shooter);
 
 		Vector3 toEnemy = enemy.transform.position - shooter.m_TurretHead.position;
 		float rotationDuration = Vector3.Angle(shooter.m_TurretHead.forward, toEnemy) / shooter.m_RotationSpeed;
