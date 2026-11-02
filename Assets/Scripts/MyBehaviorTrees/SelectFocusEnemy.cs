@@ -45,14 +45,14 @@ public abstract class SelectFocusEnemy : Action
 }
 
 [TaskCategory("MyTasks")]
-[TaskDescription("Red army: select an enemy Drone. A drone takes the nearest one and keeps it until it dies; a turret takes the nearest one, aiming where it is going to be")]
+[TaskDescription("Red army: select an enemy Drone. A drone is assigned to a group attacking the most advanced one and keeps it until it dies; a turret takes the nearest one, aiming where it is going to be")]
 public class SelectFocusEnemyDrone : SelectFocusEnemy
 {
 	protected override Transform Select(ArmyManagerRed armyManager)
 	{
 		Turret shooter = GetComponent<Turret>();
 		if (shooter == null)
-			return TransformOf(armyManager.GetNearestEnemy<Drone>(transform.position, minRadius.Value, maxRadius.Value, PreviousTarget()));
+			return TransformOf(armyManager.AssignTarget<Drone>(GetComponent<ArmyElement>(), minRadius.Value, maxRadius.Value, PreviousTarget()));
 
 		// les drones bougent et la grenade met 4 s à tomber : on vise la position anticipée
 		GameObject enemy = armyManager.GetNearestEnemy<Drone>(transform.position, minRadius.Value, maxRadius.Value, null);
@@ -61,14 +61,14 @@ public class SelectFocusEnemyDrone : SelectFocusEnemy
 }
 
 [TaskCategory("MyTasks")]
-[TaskDescription("Red army: select an enemy Turret. A drone takes the nearest one and keeps it until it dies; a turret follows the focus fire of the ArmyManagerRed and reserves its rocket on the target")]
+[TaskDescription("Red army: select an enemy Turret. A drone is assigned to a group attacking the most advanced one and keeps it until it dies; a turret follows the focus fire of the ArmyManagerRed and reserves its rocket on the target")]
 public class SelectFocusEnemyTurret : SelectFocusEnemy
 {
 	protected override Transform Select(ArmyManagerRed armyManager)
 	{
 		Turret shooter = GetComponent<Turret>();
 		if (shooter == null)
-			return TransformOf(armyManager.GetNearestEnemy<Turret>(transform.position, minRadius.Value, maxRadius.Value, PreviousTarget()));
+			return TransformOf(armyManager.AssignTarget<Turret>(GetComponent<ArmyElement>(), minRadius.Value, maxRadius.Value, PreviousTarget()));
 
 		GameObject enemy = armyManager.GetFocusEnemy<Turret>(transform.position, minRadius.Value, maxRadius.Value);
 

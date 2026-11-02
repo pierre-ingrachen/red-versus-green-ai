@@ -54,7 +54,7 @@ Rien n'a été modifié côté vert ni dans les caractéristiques de l'Annexe A 
 
 ---
 
-## 2. Drones rouges : cible la plus proche, conservée jusqu'à sa mort — 🟡 À valider
+## 2. Drones rouges : cible la plus proche, conservée jusqu'à sa mort — ❌ Remplacée (voir 5)
 
 **Problème.** Avec le focus fire global, les drones allaient vers un ennemi lointain (la cible était choisie par rapport au barycentre de l'armée, pas à la position du drone).
 
@@ -64,7 +64,7 @@ Rien n'a été modifié côté vert ni dans les caractéristiques de l'Annexe A 
 - Arbre `DroneRedBehavior` inchangé par rapport à la v1 (`Selector` : drone d'abord, sinon tourelle).
 - Effet attendu : moins de trajet sous le feu, et un focus naturel (les drones voisins choisissent le même ennemi proche).
 
-## 3. Tourelles rouges : défense contre les drones qui s'approchent, tir avec anticipation — 🟡 À valider
+## 3. Tourelles rouges : défense contre les drones qui s'approchent, tir avec anticipation — ❌ Abandonnée
 
 **Problème.** Les tourelles ne ciblaient que des tourelles ennemies (ou des drones lointains) et se faisaient détruire par les drones verts qui s'arrêtent à 6 m d'elles pour tirer.
 
@@ -73,7 +73,7 @@ Rien n'a été modifié côté vert ni dans les caractéristiques de l'Annexe A 
 - `ArmyManagerRed.GetAimPoint()` : la grenade met 4 s à tomber et le drone bouge. Un point de visée invisible (un `GameObject` vide enfant du manager, un par tourelle) est placé à la **position anticipée** du drone : sa position + vitesse du `NavMeshAgent` × (temps de rotation + 4 s), limitée à la distance restante jusqu'à son point d'arrivée. `TurretSeekTarget` et `TurretShoot` (partagés avec le vert, non modifiés) visent ce point.
 - Limite connue : on ignore ce que le drone fera ensuite (le chef d'état-major ne connaît pas les intentions) ; un drone arrêté qui repart avant l'impact échappe à la grenade.
 
-**Vérifications faites (2 et 3)** : compilation indépendante sans erreur, JSON de l'arbre relu. Pas encore testé en jeu.
+**Bilan (simulation hors éditeur)** : avec ces deux changements, l'armée rouge est détruite en 29 s en moyenne (10 batailles), contre 52 s avec l'IA d'origine. Les tourelles qui se détournent vers les drones perdent le duel d'artillerie, et les drones qui attaquent chacun l'ennemi le plus proche se dispersent comme les verts. Remplacés par les modifications 4 à 6.
 
 **À valider**
 - [ ] Les drones rouges attaquent le drone vert le plus proche et le gardent jusqu'à sa mort.
@@ -83,13 +83,41 @@ Rien n'a été modifié côté vert ni dans les caractéristiques de l'Annexe A 
 
 ---
 
+## Outil de simulation (hors dépôt)
+Pour mesurer sans lancer Unity à la main : `sim-tools/run_sim.sh [N] [étiquette] [révision git]` (dossier ignoré par git). Il copie le projet dans le dossier temporaire, compile un exécutable Mac, lance N batailles sans fenêtre, en basse priorité et avec un pas de temps fixe de 1/60 s, puis écrit un fichier de résultats et un suivi toutes les 5 s (unités et PV de chaque camp). Une seule bataille par test : c'est bruité, on lit surtout le déroulé.
+
+## Ce que les simulations ont appris (IA d'origine, 54 s, défaite)
+- Les **tourelles vertes (9) détruisent toute l'artillerie rouge en 15 à 25 s** : le duel d'artillerie 6 contre 9 est perdu d'avance.
+- Les **drones rouges ne meurent en masse qu'après la destruction des tourelles rouges** : les tourelles vertes visent d'abord les tourelles, puis les drones, et leurs grenades (zone de 5 m) font des ravages sur des drones groupés.
+- Les drones rouges de l'IA d'origine ne détruisent presque aucun drone vert (1 à 3 en 54 s).
+
+## 4. Drones : répartition en groupes, tirs anticipés, déplacement circulaire — 🟡 À valider
+- `ArmyManagerRed.AssignTarget<T>()` : les drones sont répartis en groupes sur les ennemis les plus avancés vers le centre de notre armée, chaque ennemi recevant juste assez de drones pour être détruit (PV / dégâts d'une salve). Chaque drone garde sa cible jusqu'à sa mort.
+- `DroneAim` (visée anticipée : vitesse de la cible + temps de vol du missile), `StrafeMovement` / `StrafeAim` / `StrafeAround` : le drone tourne autour de sa cible au lieu de rester immobile, pivote vers le point anticipé (même loi que `MySlerpRotateAroundY` : coefficient 4, angle d'arrivée 5°) et tire. Pendant l'attente de 1 à 2 s (inchangée) il continue de bouger (`ParallelSelector` Wait + `StrafeAround`). Vitesse et vitesse angulaire de l'agent inchangées (fixées par `MySeek`, Annexe A).
+- Arbre `DroneRedBehavior` : `Selector(cible) → MySeek → StrafeAim → DroneShoot → ParallelSelector(Wait, StrafeAround)`.
+
+## 5. Drones : attaquer d'abord les tourelles ennemies — 🟡 Très prometteur
+**Idée.** Les tourelles vertes sont la principale source de dégâts contre nous, elles sont fixes, ne visent pas les drones tant qu'il reste des tourelles rouges, et ne peuvent pas cibler à moins de 5 m. Les éliminer en premier avec les drones.
+- Arbre `DroneRedBehavior` : le `Selector` essaie `SelectFocusEnemyTurret` avant `SelectFocusEnemyDrone`. Capacité d'un groupe sur une tourelle : 10 PV par drone (tous les missiles touchent une cible fixe).
+- Tourelles rouges : retour au focus sur les tourelles vertes (modification 1).
+- **Résultat (1 bataille)** : les 9 tourelles vertes sont détruites à 35 s (l'IA d'origine en laisse 3 après 54 s) ; les 13 drones rouges sont encore tous vivants à 20 s. Défaite finale (38 s) face aux 19 drones verts intacts : il reste à gagner le combat de drones.
+
+---
+
 ## Résultats de simulation
 
 | Version | Batailles | Victoires | Drones vivants (moy.) | Tourelles vivantes (moy.) | PV restants (moy.) | Durée (moy., s) |
 |---|---|---|---|---|---|---|
-| Base (arbres d'origine) | _à mesurer_ | | | | | |
-| 1. Focus fire | _à mesurer_ | | | | | |
-| 2+3. Plus proche + défense des tourelles | _à mesurer_ | | | | | |
+Une bataille par ligne (bruité). `vert restant` = ce qu'il reste à l'armée verte à la fin (plus c'est bas, mieux c'est).
+
+| Version | Durée | Résultat | Vert restant (drones / tourelles / PV) | Remarque |
+|---|---|---|---|---|
+| Base (arbres d'origine) | 54 s | défaite | 16 / 3 / 870 | référence |
+| 3. Plus proche + défense des tourelles (10 batailles) | 29 s moy. | 0/10 | — | pire que la base |
+| 3b. Groupes de drones, tourelles focus | 26 s | défaite | 18 / 7 / 1180 | drones se regroupent |
+| 4. + tir anticipé | 21 s | défaite | 18 / 6 / 1425 | |
+| 5. + déplacement circulaire | 23 s | défaite | 19 / 6 / 1370 | |
+| **6. Drones sur les tourelles d'abord** | 38 s | défaite | **19 / 0 / 800** | toutes les tourelles vertes détruites |
 
 ---
 

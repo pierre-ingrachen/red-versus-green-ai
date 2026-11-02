@@ -24,3 +24,6 @@
 
 # Notes locales de Claude Code
 /.claude/
+
+# Outils de simulation locale (hors dépôt)
+/sim-tools/

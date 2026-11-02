@@ -26,6 +26,12 @@ public class ArmyManagerRed : ArmyManager
 
 	// cible actuellement focalisée, par type d'unité (Drone, Turret)
 	readonly Dictionary<System.Type, ArmyElement> m_Focus = new Dictionary<System.Type, ArmyElement>();
+	const float k_DamagePerSalvo = 10f;         // une salve de drone = 2 missiles de 5 PV (Annexe A) : sûrs de toucher une tourelle fixe
+	const float k_ExpectedDamagePerDrone = 7f; // une salve de drone = 10 PV (2 missiles de 5), dont on compte environ 70 % de touches
+
+	// pour chaque ennemi, les unités rouges qui lui sont assignées
+	readonly Dictionary<ArmyElement, List<ArmyElement>> m_Assignments = new Dictionary<ArmyElement, List<ArmyElement>>();
+
 	// point de visée (invisible) de chaque tourelle : sert à viser l'endroit où un drone sera, et non où il est
 	readonly Dictionary<Turret, Transform> m_AimPoints = new Dictionary<Turret, Transform>();
 	// dégâts de grenades "réservés" sur une cible : tirs déjà décidés mais pas encore tombés
@@ -83,6 +89,56 @@ public class ArmyManagerRed : ArmyManager
 		ArmyElement target = best != null ? best : doomed;
 		if (target != null) m_Focus[typeof(T)] = target;
 		return target != null ? target.gameObject : null;
+	}
+
+	int AssignedCount(ArmyElement enemy)
+	{
+		List<ArmyElement> assigned;
+		if (!m_Assignments.TryGetValue(enemy, out assigned)) return 0;
+		assigned.RemoveAll(item => item == null);
+		return assigned.Count;
+	}
+
+	/// <summary>
+	/// Répartit les unités rouges par groupes sur les ennemis de type T : les ennemis les plus avancés vers le centre de notre armée en premier,
+	/// chacun recevant juste assez d'unités pour être détruit (PV / dégâts attendus par unité), les suivantes passant à l'ennemi d'après.
+	/// current (la cible précédente de l'appelant) est conservée tant qu'elle est vivante : on tire dessus jusqu'à sa mort.
+	/// </summary>
+	public GameObject AssignTarget<T>(ArmyElement caller, float minRadius, float maxRadius, ArmyElement current) where T : ArmyElement
+	{
+		if (current != null && current is T && current.Health > 0 && current.ArmyManager != this) return current.gameObject;
+
+		foreach (ArmyElement deadEnemy in m_Assignments.Keys.Where(key => key == null).ToList()) m_Assignments.Remove(deadEnemy);
+		foreach (List<ArmyElement> assigned in m_Assignments.Values) assigned.Remove(caller);
+
+		Vector3 center = ArmyCenter();
+		Vector3 callerPosition = caller.transform.position;
+		List<T> candidates = GetAllEnemiesOfType<T>(false)
+			.Where(enemy =>
+			{
+				float distance = Vector3.Distance(callerPosition, enemy.transform.position);
+				return enemy.Health > 0 && distance > minRadius && distance < maxRadius;
+			})
+			.OrderBy(enemy => Vector3.Distance(center, enemy.transform.position))
+			.ToList();
+
+		ArmyElement chosen = null;
+		foreach (T enemy in candidates)
+		{
+			if (AssignedCount(enemy) < Mathf.CeilToInt(enemy.Health / (enemy is Turret ? k_DamagePerSalvo : k_ExpectedDamagePerDrone))) { chosen = enemy; break; }
+		}
+		if (chosen == null && candidates.Count > 0) chosen = candidates[0]; // tous les ennemis ont leur compte : on renforce le plus avancé
+
+		if (chosen == null) return null;
+
+		List<ArmyElement> group;
+		if (!m_Assignments.TryGetValue(chosen, out group))
+		{
+			group = new List<ArmyElement>();
+			m_Assignments[chosen] = group;
+		}
+		group.Add(caller);
+		return chosen.gameObject;
 	}
 
 	/// <summary>
