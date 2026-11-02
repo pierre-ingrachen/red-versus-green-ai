@@ -119,7 +119,9 @@ public class ArmyManagerRed : ArmyManager
 				float distance = Vector3.Distance(callerPosition, enemy.transform.position);
 				return enemy.Health > 0 && distance > minRadius && distance < maxRadius;
 			})
-			.OrderBy(enemy => Vector3.Distance(center, enemy.transform.position))
+			// drones ennemis : on achève d'abord les plus blessés (un ennemi mort ne tire plus), les plus proches départageant ;
+			// tourelles ennemies (fixes, intactes) : les plus avancées vers le centre de notre armée d'abord
+			.OrderBy(enemy => enemy is Drone ? enemy.Health + Vector3.Distance(callerPosition, enemy.transform.position) : Vector3.Distance(center, enemy.transform.position))
 			.ToList();
 
 		ArmyElement chosen = null;

@@ -61,20 +61,12 @@ public class SelectFocusEnemyDrone : SelectFocusEnemy
 }
 
 [TaskCategory("MyTasks")]
-[TaskDescription("Red army: select an enemy Turret. A drone is assigned to a group attacking the most advanced one and keeps it until it dies; a turret follows the focus fire of the ArmyManagerRed and reserves its rocket on the target")]
+[TaskDescription("Red army: select an enemy Turret. A drone is assigned to a group attacking the most advanced one and keeps it until it dies; drones and turrets share the enemy turrets in groups, each one receiving just enough shots to be destroyed")]
 public class SelectFocusEnemyTurret : SelectFocusEnemy
 {
 	protected override Transform Select(ArmyManagerRed armyManager)
 	{
-		Turret shooter = GetComponent<Turret>();
-		if (shooter == null)
-			return TransformOf(armyManager.AssignTarget<Turret>(GetComponent<ArmyElement>(), minRadius.Value, maxRadius.Value, PreviousTarget()));
-
-		GameObject enemy = armyManager.GetFocusEnemy<Turret>(transform.position, minRadius.Value, maxRadius.Value);
-
-		// une tourelle ennemie ne bouge pas : la grenade est sûre de toucher, les tourelles suivantes peuvent viser autre chose quand les dégâts réservés suffisent à la détruire
-		if (enemy != null) armyManager.ReserveRocketShot(shooter, enemy.GetComponent<ArmyElement>());
-
-		return TransformOf(enemy);
+		// drones et tourelles rouges se partagent les tourelles ennemies par groupes : chacune reçoit juste assez de salves (10 PV chacune) pour être détruite
+		return TransformOf(armyManager.AssignTarget<Turret>(GetComponent<ArmyElement>(), minRadius.Value, maxRadius.Value, PreviousTarget()));
 	}
 }

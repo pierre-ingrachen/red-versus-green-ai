@@ -91,16 +91,33 @@ Pour mesurer sans lancer Unity à la main : `sim-tools/run_sim.sh [N] [étiquett
 - Les **drones rouges ne meurent en masse qu'après la destruction des tourelles rouges** : les tourelles vertes visent d'abord les tourelles, puis les drones, et leurs grenades (zone de 5 m) font des ravages sur des drones groupés.
 - Les drones rouges de l'IA d'origine ne détruisent presque aucun drone vert (1 à 3 en 54 s).
 
-## 4. Drones : répartition en groupes, tirs anticipés, déplacement circulaire — 🟡 À valider
+## 4. Drones : répartition en groupes, tirs anticipés, déplacement circulaire — 🟡 Effet non démontré
 - `ArmyManagerRed.AssignTarget<T>()` : les drones sont répartis en groupes sur les ennemis les plus avancés vers le centre de notre armée, chaque ennemi recevant juste assez de drones pour être détruit (PV / dégâts d'une salve). Chaque drone garde sa cible jusqu'à sa mort.
 - `DroneAim` (visée anticipée : vitesse de la cible + temps de vol du missile), `StrafeMovement` / `StrafeAim` / `StrafeAround` : le drone tourne autour de sa cible au lieu de rester immobile, pivote vers le point anticipé (même loi que `MySlerpRotateAroundY` : coefficient 4, angle d'arrivée 5°) et tire. Pendant l'attente de 1 à 2 s (inchangée) il continue de bouger (`ParallelSelector` Wait + `StrafeAround`). Vitesse et vitesse angulaire de l'agent inchangées (fixées par `MySeek`, Annexe A).
 - Arbre `DroneRedBehavior` : `Selector(cible) → MySeek → StrafeAim → DroneShoot → ParallelSelector(Wait, StrafeAround)`.
+- **Bilan** : dans un duel de drones (sans tourelles), le rouge et le vert ont la même efficacité par drone (~2,2 PV/s chacun) : le déplacement circulaire et le tir anticipé ne donnent pas d'avantage mesurable pour l'instant. Conservés (sans effet négatif visible) en attendant mieux.
 
 ## 5. Drones : attaquer d'abord les tourelles ennemies — 🟡 Très prometteur
 **Idée.** Les tourelles vertes sont la principale source de dégâts contre nous, elles sont fixes, ne visent pas les drones tant qu'il reste des tourelles rouges, et ne peuvent pas cibler à moins de 5 m. Les éliminer en premier avec les drones.
 - Arbre `DroneRedBehavior` : le `Selector` essaie `SelectFocusEnemyTurret` avant `SelectFocusEnemyDrone`. Capacité d'un groupe sur une tourelle : 10 PV par drone (tous les missiles touchent une cible fixe).
 - Tourelles rouges : retour au focus sur les tourelles vertes (modification 1).
 - **Résultat (1 bataille)** : les 9 tourelles vertes sont détruites à 35 s (l'IA d'origine en laisse 3 après 54 s) ; les 13 drones rouges sont encore tous vivants à 20 s. Défaite finale (38 s) face aux 19 drones verts intacts : il reste à gagner le combat de drones.
+
+
+## 6. Drones : achever les plus blessés en priorité — 🟡 Prometteur
+Dans `AssignTarget`, pour les drones ennemis, l'ordre des cibles est `PV + distance au drone qui demande` (au lieu de la distance au centre de l'armée) : on transforme les dégâts en destructions. **Test de duel (sans tourelles, 13 drones rouges contre 19 verts, 1 bataille)** : 7 drones verts détruits et 640 PV infligés pour 650 PV perdus, contre 2 détruits et 420 PV avant ce changement. Défaite quand même (24 s), mais proche de l'équilibre.
+
+## 7. Drones : « légitime défense » (combattre un drone ennemi à moins de 12 m) — ❌ Abandonnée
+Test complet (v8) : détourne les drones des tourelles vertes sans tuer assez de drones (3 détruits) ; 6 tourelles vertes survivent et massacrent les drones rouges dès que nos tourelles sont mortes. Retiré.
+
+## 8. Drones et tourelles rouges se partagent les tourelles ennemies par groupes — 🟡 Neutre
+Les tourelles rouges utilisent maintenant `AssignTarget<Turret>` comme les drones (capacité : 10 PV par unité), pour éviter que toute l'armée vise la même tourelle. Test complet (v9) : pas d'accélération mesurable de la destruction des tourelles vertes (1 restante à 35 s, comme avant). Les méthodes `GetFocusEnemy` et `ReserveRocketShot` de `ArmyManagerRed` ne sont plus utilisées par les arbres.
+
+## Constats des simulations (v6 à v9)
+- Détruire les tourelles vertes en premier avec les drones est la seule piste qui a nettement amélioré les choses (9 tourelles détruites en ~38 s, drones rouges encore presque intacts à 20 s).
+- Mais le rythme de destruction (~25 PV/s, environ la moitié du débit théorique de 13 drones + 6 tourelles) est trop lent : **tant qu'il reste des tourelles vertes quand les nôtres meurent (vers 15-20 s), elles s'acharnent sur nos drones**, qui s'effondrent en 10 à 15 s.
+- Une fois les tourelles vertes détruites, il reste 19 drones verts intacts face à quelques drones rouges blessés : défaite.
+- Pistes non encore testées : esquive des grenades à partir de leur trajectoire (visible par le chef d'état-major), attaque des tourelles verte par leur flanc/angle mort, retarder la mort des tourelles rouges, mieux comprendre pourquoi le débit de destruction est à ~50 % du théorique (trajets, portée, alignement).
 
 ---
 
@@ -117,7 +134,12 @@ Une bataille par ligne (bruité). `vert restant` = ce qu'il reste à l'armée ve
 | 3b. Groupes de drones, tourelles focus | 26 s | défaite | 18 / 7 / 1180 | drones se regroupent |
 | 4. + tir anticipé | 21 s | défaite | 18 / 6 / 1425 | |
 | 5. + déplacement circulaire | 23 s | défaite | 19 / 6 / 1370 | |
-| **6. Drones sur les tourelles d'abord** | 38 s | défaite | **19 / 0 / 800** | toutes les tourelles vertes détruites |
+| 6. Drones sur les tourelles d'abord | 38 s | défaite | 19 / 0 / 800 | toutes les tourelles vertes détruites |
+| Duel de drones (sans tourelles), avant 6 | 15 s | défaite | 17 / – / 530 | 2 drones détruits |
+| Duel de drones, achever les blessés | 24 s | défaite | 12 / – / 310 | 7 drones détruits |
+| 7. Tourelles d'abord + blessés en priorité | 48 s | défaite | 19 / 0 / 870 | tourelles détruites à 40 s, drones rouges épuisés |
+| 8. + légitime défense | 37 s | défaite | 16 / 6 / 1050 | abandonné |
+| 9. Partage par groupes (tourelles aussi) | 39 s | défaite | 19 / 1 / 960 | équivalent à 7 |
 
 ---
 
