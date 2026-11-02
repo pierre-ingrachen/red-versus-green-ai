@@ -152,7 +152,7 @@ Les tourelles vertes sont espacées de 6 à 11 m seulement et la grenade fait de
 - `ArmyManagerRed.GetSplashAimPoint()` : pour une tourelle rouge, parmi les positions des tourelles ennemies et les milieux de celles qui sont à moins de 11 m l'une de l'autre, on choisit le point qui inflige le plus de dégâts utiles (10 PV par tourelle touchée, moins ce qui est déjà réservé par des tirs en route), puis on réserve les dégâts sur chaque tourelle de la zone. Le point de visée est un `GameObject` invisible (comme pour le tir anticipé), donc `TurretSeekTarget` et `TurretShoot` ne sont pas modifiés.
 - Les drones rouges, eux, gardent la répartition par groupes (`AssignTarget`).
 - **Bataille v20 : VICTOIRE en 84 s, 7 drones rouges et 145 PV restants.** Les 9 tourelles vertes sont détruites à 25 s (30 à 35 s avant), avec 12 drones rouges encore en vie à 530 PV ; le duel de drones qui suit est gagné.
-- À confirmer : c'est une seule bataille ; les trois précédentes de la même configuration (sans le point de visée optimisé) étaient des défaites de peu (86 s, 75 s, 57 s).
+- **Reproductibilité : 1 victoire sur 2 batailles.** La seconde (v20b) est une défaite de peu après 125 s : les 9 tourelles vertes sont détruites à 25 s (13 drones rouges encore à 595 PV), mais le long duel de drones qui suit est perdu avec 8 drones verts (240 PV) restants. Les trois batailles précédentes de la même configuration (sans la visée de zone) étaient des défaites de peu (86 s, 75 s, 57 s). Il faut une série pour connaître le taux de victoire réel.
 
 ## 17. Drones : préférer les drones ennemis à l'arrêt, réévaluer la cible à chaque tour — 🟡 Effet non démontré
 Pénalité de 40 sur le score d'un drone ennemi qui court (plus de 2 m/s) : un drone vert immobile (en train de tirer ou d'attendre) est une cible facile. Les tourelles ennemies restent gardées jusqu'à leur destruction. Bataille v19 : défaite en 57 s (dans le bruit).
@@ -187,6 +187,7 @@ Une bataille par ligne (bruité). `vert restant` = ce qu'il reste à l'armée ve
 | 15b. Même configuration (v18b) | 75 s | défaite | 12 / 0 / 355 | reproductible |
 | 17. + drones à l'arrêt en priorité (v19) | 57 s | défaite | 12 / 2 / 325 | |
 | **16. + tourelles rouges : visée de zone (v20)** | **84 s** | **VICTOIRE** | **0 / 0 / 0** (rouge : 7 drones, 145 PV) | première victoire en bataille complète |
+| 16b. Même configuration (v20b) | 125 s | défaite | 8 / 0 / 240 | tourelles vertes détruites à 25 s, duel de drones perdu de peu |
 
 ---
 
