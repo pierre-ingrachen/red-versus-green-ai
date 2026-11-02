@@ -1,0 +1,26 @@
+# Unity : dossiers générés (le sujet demande de retirer Library de la livraison)
+/Library/
+/Temp/
+/Obj/
+/Logs/
+/UserSettings/
+/MemoryCaptures/
+/Recordings/
+/Build/
+/Builds/
+
+# IDE / fichiers générés par Unity
+/.vs/
+/.vscode/
+/.idea/
+*.csproj
+*.sln
+*.slnx
+*.user
+*.pidb
+*.suo
+*.tmp
+.DS_Store
+
+# Notes locales de Claude Code
+/.claude/
