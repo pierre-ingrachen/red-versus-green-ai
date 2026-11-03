@@ -14,6 +14,7 @@ public abstract class StrafeMovement : Action
 	// à portée, on applique ici les mêmes valeurs (elles ne sont pas modifiées).
 	const float k_Speed = 10f;
 	const float k_AngularSpeed = 180f;
+	const float k_ArriveDistance = 6f;  // Annexe A : Arrive Distance de My Seek, conservée (les drones verts s'arrêtent aussi à 6 m de leur destination)
 
 	const float k_ThreatRange = 25f;    // ennemis pris en compte pour l'esquive
 	const float k_MinTargetDistance = 6f;
@@ -22,7 +23,7 @@ public abstract class StrafeMovement : Action
 	const bool k_DodgeGrenades = true;      // test : l'esquive des grenades détourne les drones de leur cible
 	const float k_GrenadeDangerRadius = 8f; // rayon de dégâts des grenades (Annexe A : 5 m) + marge
 	const float k_DodgeSpeed = 8f;          // vitesse moyenne retenue pour une fuite (accélération limitée à 8 m/s²)
-	const float k_StepLength = 14f;     // destination lointaine : l'agent ne freine jamais et garde sa pleine vitesse
+	const float k_StepLength = 14f;     // distance réellement parcourue par pas ; la destination est placée k_ArriveDistance plus loin car l'agent s'arrête à 6 m d'elle
 
 	protected NavMeshAgent m_Agent;
 	ArmyElement m_ArmyElement;
@@ -43,7 +44,7 @@ public abstract class StrafeMovement : Action
 		m_Agent.angularSpeed = k_AngularSpeed;
 		m_Agent.isStopped = false;
 		m_Agent.updateRotation = false; // le drone avance de côté en restant tourné vers sa cible
-		m_Agent.stoppingDistance = 0;   // MySeek l'a réglée à 6 m : en dessous, l'agent se croirait arrivé et ne bougerait presque pas (rétablie par MySeek à la boucle suivante)
+		m_Agent.stoppingDistance = k_ArriveDistance;
 		m_Direction = Random.value < .5f ? -1 : 1;
 		m_NextFlip = Time.time + Random.Range(2f, 3.5f);
 		m_NextRepath = 0;
@@ -95,8 +96,8 @@ public abstract class StrafeMovement : Action
 	{
 		NavMeshHit hit;
 		Vector3 position = transform.position;
-		if (NavMesh.SamplePosition(position + direction * k_StepLength, out hit, 4f, NavMesh.AllAreas) ||
-			NavMesh.SamplePosition(position + direction * k_StepLength * 0.5f, out hit, 4f, NavMesh.AllAreas))
+		if (NavMesh.SamplePosition(position + direction * (k_StepLength + k_ArriveDistance), out hit, 4f, NavMesh.AllAreas) ||
+			NavMesh.SamplePosition(position + direction * (k_StepLength + k_ArriveDistance) * 0.5f, out hit, 4f, NavMesh.AllAreas))
 		{
 			m_Agent.SetDestination(hit.position);
 		}

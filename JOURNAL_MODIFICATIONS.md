@@ -170,6 +170,11 @@ Toutes mesurées sur une seule bataille ; les écarts restent dans le bruit, auc
 Nouvelle méthode `ArmyManagerRed.GetDroneSplashAimPoint` (appelée par `SelectFocusEnemyDrone` pour une tourelle) : on vise le point d'arrivée prévu (rotation + 4 s de vol) qui touche le plus de drones verts (rayon 4,5 m). Remplace le tir sur le drone le plus proche.
 Mesure par séries de 3 batailles complètes, graines communes (`SIM_SEED`, outil hors git) : graine 100 → 3/3 (avant 3/3), graine 200 → 3/3 (avant 2/3). PV rouges restants : 157 en moyenne contre 139 avant. Une victoire de justesse (1 drone, 10 PV). Écart non significatif sur 6 batailles ; retenu car il ne dégrade rien.
 
+## 20. Conformité : distance d'arrêt des drones rétablie à 6 m (Annexe A) — ✅ Appliquée (coût mesuré)
+`StrafeMovement` mettait `stoppingDistance = 0` ; l'Arrive Distance de l'Annexe A (6 m) est désormais respectée. Les destinations sont placées 6 m plus loin pour que le pas parcouru reste de 14 m.
+Séries de 3 batailles : graine 100 → 2/3 (3/3 avant), graine 200 → 2/3 (3/3 avant). Total 4/6 contre 6/6 : retenu malgré la baisse, la conformité prime.
+Point encore ouvert (décision utilisateur) : les drones rouges se déplacent pendant le `Wait` (`ParallelSelector` Wait + `StrafeAround`) et pendant la visée (`StrafeAim`), alors que les drones verts restent immobiles.
+
 ## Résultats de simulation
 
 | Version | Batailles | Victoires | Drones vivants (moy.) | Tourelles vivantes (moy.) | PV restants (moy.) | Durée (moy., s) |
@@ -207,6 +212,8 @@ Une bataille par ligne (bruité). `vert restant` = ce qu'il reste à l'armée ve
 | Référence v20, graine 200 (3 batailles) | 95 s | 2/3 | rouge : 90 PV | |
 | **19. Tourelles : zone sur drones, graine 100** | 109 s | 3/3 | rouge : 115 PV | |
 | **19. Tourelles : zone sur drones, graine 200** | 83 s | 3/3 | rouge : 198 PV | |
+| **20. Arrêt à 6 m (conformité), graine 100** | 81 s | 2/3 | rouge : 160 PV | |
+| **20. Arrêt à 6 m (conformité), graine 200** | 79 s | 2/3 | rouge : 172 PV | |
 
 ---
 
