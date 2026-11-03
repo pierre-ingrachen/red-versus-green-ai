@@ -179,6 +179,16 @@ Point encore ouvert (décision utilisateur) : les drones rouges se déplacent pe
 Règle : aucun avantage injuste sur l'armée verte, on ne gagne que par la stratégie et le chef d'état-major. Retirés : `StrafeMovement`, `StrafeAim`, `StrafeAround` (déplacement latéral, esquive des grenades, espacement pendant le `Wait` et la visée). Le `ParallelSelector` est remplacé par le `Wait` seul (1 à 2 s, immobile). Nouvelle tâche `PredictiveAim` : le drone pivote sur place (même loi que `MySlerpRotateAroundY`, 4 et 5°) vers la position anticipée de la cible.
 Séries de 3 batailles : graine 100 → 1/3, graine 200 → 1/3. Total 2/6 (4/6 avant, 6/6 avec l'arrêt à 0 m). Défaites typiques : tourelles vertes détruites mais 11 à 15 drones verts restants (290 à 365 PV).
 
+## 22. Pistes testées en configuration stricte — ❌ Aucune retenue (tout dans le bruit ou pire)
+Séries de 3 batailles (graines 100 et 200), base stricte = 2 victoires sur 6 (PV rouges restants 22 en moyenne).
+| Variante | Victoires / 6 | PV rouges (moy.) | Décision |
+|---|---|---|---|
+| `k_ExpectedDamagePerDrone` 5 (groupes plus gros) | 3 | 90 | dans le bruit, non retenu |
+| `k_ExpectedDamagePerDrone` 10 | 2 | 58 | non retenu |
+| Tourelles : drones d'abord, tourelles ensuite | 1 | 6 | ❌ nettement pire (défaites vers 45 s) |
+| `IsTargetInRange` 30 m au lieu de 16 m | 2 | 10 | non retenu |
+Analyse du déroulé : à la fin de la phase d'artillerie (20 à 27 s) Rouge a ~440–565 PV contre ~775–940 PV ; le duel de drones qui suit se fait à environ 2 PV pour 1 : on est au seuil, d'où 1 sur 3 à 1 sur 2. Le code est revenu à l'état de la section 21.
+
 ## Résultats de simulation
 
 | Version | Batailles | Victoires | Drones vivants (moy.) | Tourelles vivantes (moy.) | PV restants (moy.) | Durée (moy., s) |
