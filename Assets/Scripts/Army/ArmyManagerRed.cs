@@ -31,7 +31,7 @@ public class ArmyManagerRed : ArmyManager
 	const float k_DroneSplashRadius = 4.5f;    // grenade de 5 m, avec une marge : la position prévue d'un drone vert est incertaine
 	const float k_SplashAimRadius = 5.5f;      // rayon de dégâts de la grenade (Annexe A : 5 m) + rayon du collider d'une tourelle
 	const float k_DamagePerSalvo = 10f;         // une salve de drone = 2 missiles de 5 PV (Annexe A) : sûrs de toucher une tourelle fixe
-	const float k_ExpectedDamagePerDrone = 7f; // une salve de drone = 10 PV (2 missiles de 5), dont on compte environ 70 % de touches
+	const float k_ExpectedDamagePerDrone = 10f; // une salve de drone = 10 PV (2 missiles de 5), dont on compte environ 70 % de touches
 
 	// pour chaque ennemi, les unités rouges qui lui sont assignées
 	readonly Dictionary<ArmyElement, List<ArmyElement>> m_Assignments = new Dictionary<ArmyElement, List<ArmyElement>>();

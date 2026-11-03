@@ -193,6 +193,9 @@ Analyse du déroulé : à la fin de la phase d'artillerie (20 à 27 s) Rouge a ~
 Les drones s'étalent sur les tourelles vertes au lieu de se grouper autour de la même : sans esquive ni espacement (retirés par la conformité stricte), un tas de drones prend les grenades de zone d'un coup. Tendance monotone mesurée (victoires sur 6) : 8 par tourelle → 0, 4 → 2, 2 → 3, **1 → 6**. PV rouges restants 236 en moyenne (22 avant). Écartés au passage : choix par valeur du tir de zone des tourelles (1/6), groupes de 8 (0/6).
 Réglé sur les graines 100 et 200. **Validation sur des graines neuves (300 et 400) : 5 victoires sur 6** (2/3 et 3/3 ; la défaite : 5 drones verts restants, 95 PV). Total 11/12 en configuration stricte. Statut : 🟡 solide mais pas encore 20/20.
 
+## 24. Groupes de tir plus petits sur les drones verts (`k_ExpectedDamagePerDrone` 7 → 10) — 🟡 Une seule série (3/3), à confirmer
+Une salve de drone compte 10 PV attendus au lieu de 7 : moins de drones rouges assignés à chaque drone vert (5 au plus au lieu de 8), donc le feu se répartit sur plus de cibles. Série de 3 batailles, graine 300 : 3/3 (avant : 2/3), PV rouges restants 170 (avant 112), durée 65 s. Un seul jeu de graines : écart d'une bataille, non démontré. À confirmer sur d'autres graines avant de passer en ✅.
+
 ## Résultats de simulation
 
 | Version | Batailles | Victoires | Drones vivants (moy.) | Tourelles vivantes (moy.) | PV restants (moy.) | Durée (moy., s) |
@@ -234,6 +237,7 @@ Une bataille par ligne (bruité). `vert restant` = ce qu'il reste à l'armée ve
 | **20. Arrêt à 6 m (conformité), graine 200** | 79 s | 2/3 | rouge : 172 PV | |
 | **21. Stricte (immobile pendant Wait et visée), graine 100** | 76 s | 1/3 | rouge : 37 PV | |
 | **21. Stricte, graine 200** | 56 s | 1/3 | rouge : 7 PV | |
+| **24. Groupes de tir de 10 PV par drone, graine 300** | 65 s | 3/3 | rouge : 170 PV | avant : 2/3, 112 PV |
 
 ---
 
