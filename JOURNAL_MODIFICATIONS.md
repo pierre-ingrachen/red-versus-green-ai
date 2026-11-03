@@ -191,7 +191,7 @@ Analyse du déroulé : à la fin de la phase d'artillerie (20 à 27 s) Rouge a ~
 
 ## 23. Un seul drone à la fois par tourelle verte (`k_MaxDronesPerTurret` 4 → 1) — 🟡 6/6 sur les graines de réglage, à confirmer sur d'autres graines
 Les drones s'étalent sur les tourelles vertes au lieu de se grouper autour de la même : sans esquive ni espacement (retirés par la conformité stricte), un tas de drones prend les grenades de zone d'un coup. Tendance monotone mesurée (victoires sur 6) : 8 par tourelle → 0, 4 → 2, 2 → 3, **1 → 6**. PV rouges restants 236 en moyenne (22 avant). Écartés au passage : choix par valeur du tir de zone des tourelles (1/6), groupes de 8 (0/6).
-Réglé sur les graines 100 et 200 : validation sur d'autres graines à faire avant de conclure.
+Réglé sur les graines 100 et 200. **Validation sur des graines neuves (300 et 400) : 5 victoires sur 6** (2/3 et 3/3 ; la défaite : 5 drones verts restants, 95 PV). Total 11/12 en configuration stricte. Statut : 🟡 solide mais pas encore 20/20.
 
 ## Résultats de simulation
 
