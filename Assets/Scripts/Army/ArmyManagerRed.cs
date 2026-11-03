@@ -28,6 +28,7 @@ public class ArmyManagerRed : ArmyManager
 	readonly Dictionary<System.Type, ArmyElement> m_Focus = new Dictionary<System.Type, ArmyElement>();
 	const int k_MaxDronesPerTurret = 4;         // groupes restreints sur les tourelles : les drones restent dispersés (les grenades font des dégâts de zone de 5 m)
 	const float k_MovingTargetPenalty = 40f;   // un drone ennemi qui court est très difficile à toucher, un drone à l'arrêt (en train de tirer ou d'attendre) est une cible facile
+	const float k_DroneSplashRadius = 4.5f;    // grenade de 5 m, avec une marge : la position prévue d'un drone vert est incertaine
 	const float k_SplashAimRadius = 5.5f;      // rayon de dégâts de la grenade (Annexe A : 5 m) + rayon du collider d'une tourelle
 	const float k_DamagePerSalvo = 10f;         // une salve de drone = 2 missiles de 5 PV (Annexe A) : sûrs de toucher une tourelle fixe
 	const float k_ExpectedDamagePerDrone = 7f; // une salve de drone = 10 PV (2 missiles de 5), dont on compte environ 70 % de touches
@@ -373,6 +374,44 @@ public class ArmyManagerRed : ArmyManager
 			}
 			reservations.Add(new ShotReservation { Damage = k_RocketDamage, ExpireTime = expire });
 		}
+
+		Transform aimPoint = AimProxy(shooter);
+		aimPoint.position = best;
+		return aimPoint;
+	}
+
+	/// <summary>
+	/// Point de visée d'une tourelle rouge sur les drones ennemis : la grenade fait des dégâts de zone et les drones verts sont groupés ;
+	/// on vise le point d'arrivée prévu (rotation de la tourelle + 4 s de vol) qui en touche le plus.
+	/// Renvoie null s'il n'y a aucun drone ennemi dans l'anneau [minRadius, maxRadius].
+	/// </summary>
+	public Transform GetDroneSplashAimPoint(Turret shooter, float minRadius, float maxRadius)
+	{
+		List<Drone> enemies = GetAllEnemiesOfType<Drone>(false).Where(enemy => enemy.Health > 0).ToList();
+		List<Vector3> predicted = new List<Vector3>();
+		foreach (Drone enemy in enemies)
+		{
+			Vector3 toEnemy = enemy.transform.position - shooter.m_TurretHead.position;
+			float rotationDuration = Vector3.Angle(shooter.m_TurretHead.forward, toEnemy) / shooter.m_RotationSpeed;
+			predicted.Add(PredictPosition(enemy, rotationDuration + k_RocketTravelDuration));
+		}
+
+		bool found = false;
+		Vector3 best = Vector3.zero;
+		float bestValue = -1;
+		foreach (Vector3 point in predicted)
+		{
+			float distance = Vector3.Distance(shooter.transform.position, point);
+			if (distance <= minRadius || distance >= maxRadius) continue;
+
+			float value = 0;
+			for (int i = 0; i < enemies.Count; i++)
+			{
+				if (FlatDistance(point, predicted[i]) <= k_DroneSplashRadius) value += Mathf.Min(enemies[i].Health, k_RocketDamage);
+			}
+			if (value > bestValue) { found = true; best = point; bestValue = value; }
+		}
+		if (!found) return null;
 
 		Transform aimPoint = AimProxy(shooter);
 		aimPoint.position = best;

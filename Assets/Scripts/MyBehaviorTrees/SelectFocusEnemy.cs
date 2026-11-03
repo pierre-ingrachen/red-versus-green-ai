@@ -54,9 +54,8 @@ public class SelectFocusEnemyDrone : SelectFocusEnemy
 		if (shooter == null)
 			return TransformOf(armyManager.AssignTarget<Drone>(GetComponent<ArmyElement>(), minRadius.Value, maxRadius.Value, PreviousTarget()));
 
-		// les drones bougent et la grenade met 4 s à tomber : on vise la position anticipée
-		GameObject enemy = armyManager.GetNearestEnemy<Drone>(transform.position, minRadius.Value, maxRadius.Value, null);
-		return enemy != null ? armyManager.GetAimPoint(shooter, enemy.GetComponent<ArmyElement>()) : null;
+		// les drones verts sont groupés et la grenade fait des dégâts de zone : on vise le point d'arrivée prévu qui en touche le plus
+		return armyManager.GetDroneSplashAimPoint(shooter, minRadius.Value, maxRadius.Value);
 	}
 }
 

@@ -166,6 +166,10 @@ Toutes mesurées sur une seule bataille ; les écarts restent dans le bruit, auc
 
 ---
 
+## 19. Tourelles rouges : grenade de zone sur les groupes de drones verts — 🟡 À valider (6/6 contre 5/6, dans le bruit)
+Nouvelle méthode `ArmyManagerRed.GetDroneSplashAimPoint` (appelée par `SelectFocusEnemyDrone` pour une tourelle) : on vise le point d'arrivée prévu (rotation + 4 s de vol) qui touche le plus de drones verts (rayon 4,5 m). Remplace le tir sur le drone le plus proche.
+Mesure par séries de 3 batailles complètes, graines communes (`SIM_SEED`, outil hors git) : graine 100 → 3/3 (avant 3/3), graine 200 → 3/3 (avant 2/3). PV rouges restants : 157 en moyenne contre 139 avant. Une victoire de justesse (1 drone, 10 PV). Écart non significatif sur 6 batailles ; retenu car il ne dégrade rien.
+
 ## Résultats de simulation
 
 | Version | Batailles | Victoires | Drones vivants (moy.) | Tourelles vivantes (moy.) | PV restants (moy.) | Durée (moy., s) |
@@ -199,6 +203,10 @@ Une bataille par ligne (bruité). `vert restant` = ce qu'il reste à l'armée ve
 | Duel, distance de combat 24 m | 85 s | victoire | 0 / – / 0 (rouge : 5 drones, 150 PV) | pas mieux |
 | 18a. 5 drones sur les tourelles (v21) | 68 s | défaite | 12 / 2 / 355 | écarté |
 | 18b. Ouverture de 7 s sur les drones (v22) | 59 s | défaite | 11 / 1 / 295 | écarté |
+| Référence v20, graine 100 (3 batailles) | 85 s | 3/3 | rouge : 7,7 drones, 188 PV | séries |
+| Référence v20, graine 200 (3 batailles) | 95 s | 2/3 | rouge : 90 PV | |
+| **19. Tourelles : zone sur drones, graine 100** | 109 s | 3/3 | rouge : 115 PV | |
+| **19. Tourelles : zone sur drones, graine 200** | 83 s | 3/3 | rouge : 198 PV | |
 
 ---
 
