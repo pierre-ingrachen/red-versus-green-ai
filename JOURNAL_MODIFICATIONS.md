@@ -175,6 +175,10 @@ Mesure par séries de 3 batailles complètes, graines communes (`SIM_SEED`, outi
 Séries de 3 batailles : graine 100 → 2/3 (3/3 avant), graine 200 → 2/3 (3/3 avant). Total 4/6 contre 6/6 : retenu malgré la baisse, la conformité prime.
 Point encore ouvert (décision utilisateur) : les drones rouges se déplacent pendant le `Wait` (`ParallelSelector` Wait + `StrafeAround`) et pendant la visée (`StrafeAim`), alors que les drones verts restent immobiles.
 
+## 21. Conformité stricte : plus aucun déplacement hors `MySeek`, `Wait` d'origine rétabli — ✅ Appliquée (décision de l'utilisateur, coût mesuré)
+Règle : aucun avantage injuste sur l'armée verte, on ne gagne que par la stratégie et le chef d'état-major. Retirés : `StrafeMovement`, `StrafeAim`, `StrafeAround` (déplacement latéral, esquive des grenades, espacement pendant le `Wait` et la visée). Le `ParallelSelector` est remplacé par le `Wait` seul (1 à 2 s, immobile). Nouvelle tâche `PredictiveAim` : le drone pivote sur place (même loi que `MySlerpRotateAroundY`, 4 et 5°) vers la position anticipée de la cible.
+Séries de 3 batailles : graine 100 → 1/3, graine 200 → 1/3. Total 2/6 (4/6 avant, 6/6 avec l'arrêt à 0 m). Défaites typiques : tourelles vertes détruites mais 11 à 15 drones verts restants (290 à 365 PV).
+
 ## Résultats de simulation
 
 | Version | Batailles | Victoires | Drones vivants (moy.) | Tourelles vivantes (moy.) | PV restants (moy.) | Durée (moy., s) |
@@ -214,6 +218,8 @@ Une bataille par ligne (bruité). `vert restant` = ce qu'il reste à l'armée ve
 | **19. Tourelles : zone sur drones, graine 200** | 83 s | 3/3 | rouge : 198 PV | |
 | **20. Arrêt à 6 m (conformité), graine 100** | 81 s | 2/3 | rouge : 160 PV | |
 | **20. Arrêt à 6 m (conformité), graine 200** | 79 s | 2/3 | rouge : 172 PV | |
+| **21. Stricte (immobile pendant Wait et visée), graine 100** | 76 s | 1/3 | rouge : 37 PV | |
+| **21. Stricte, graine 200** | 56 s | 1/3 | rouge : 7 PV | |
 
 ---
 
