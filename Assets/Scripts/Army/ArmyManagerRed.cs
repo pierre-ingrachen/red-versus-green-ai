@@ -26,7 +26,7 @@ public class ArmyManagerRed : ArmyManager
 
 	// cible actuellement focalisée, par type d'unité (Drone, Turret)
 	readonly Dictionary<System.Type, ArmyElement> m_Focus = new Dictionary<System.Type, ArmyElement>();
-	const int k_MaxDronesPerTurret = 4;         // groupes restreints sur les tourelles : les drones restent dispersés (les grenades font des dégâts de zone de 5 m)
+	const int k_MaxDronesPerTurret = 1;         // groupes restreints sur les tourelles : les drones restent dispersés (les grenades font des dégâts de zone de 5 m)
 	const float k_MovingTargetPenalty = 40f;   // un drone ennemi qui court est très difficile à toucher, un drone à l'arrêt (en train de tirer ou d'attendre) est une cible facile
 	const float k_DroneSplashRadius = 4.5f;    // grenade de 5 m, avec une marge : la position prévue d'un drone vert est incertaine
 	const float k_SplashAimRadius = 5.5f;      // rayon de dégâts de la grenade (Annexe A : 5 m) + rayon du collider d'une tourelle

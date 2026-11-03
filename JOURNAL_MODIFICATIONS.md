@@ -189,6 +189,10 @@ Séries de 3 batailles (graines 100 et 200), base stricte = 2 victoires sur 6 (P
 | `IsTargetInRange` 30 m au lieu de 16 m | 2 | 10 | non retenu |
 Analyse du déroulé : à la fin de la phase d'artillerie (20 à 27 s) Rouge a ~440–565 PV contre ~775–940 PV ; le duel de drones qui suit se fait à environ 2 PV pour 1 : on est au seuil, d'où 1 sur 3 à 1 sur 2. Le code est revenu à l'état de la section 21.
 
+## 23. Un seul drone à la fois par tourelle verte (`k_MaxDronesPerTurret` 4 → 1) — 🟡 6/6 sur les graines de réglage, à confirmer sur d'autres graines
+Les drones s'étalent sur les tourelles vertes au lieu de se grouper autour de la même : sans esquive ni espacement (retirés par la conformité stricte), un tas de drones prend les grenades de zone d'un coup. Tendance monotone mesurée (victoires sur 6) : 8 par tourelle → 0, 4 → 2, 2 → 3, **1 → 6**. PV rouges restants 236 en moyenne (22 avant). Écartés au passage : choix par valeur du tir de zone des tourelles (1/6), groupes de 8 (0/6).
+Réglé sur les graines 100 et 200 : validation sur d'autres graines à faire avant de conclure.
+
 ## Résultats de simulation
 
 | Version | Batailles | Victoires | Drones vivants (moy.) | Tourelles vivantes (moy.) | PV restants (moy.) | Durée (moy., s) |
